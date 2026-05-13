@@ -1,65 +1,75 @@
-import Image from "next/image";
+import { supabase } from '@/lib/supabase'
+import { KpiCard } from '@/components/ui/KpiCard'
+import { OverviewCharts } from '@/components/charts/OverviewCharts'
+import type { ProjectSummary, StageAnalysis } from '@/types'
 
-export default function Home() {
+export const revalidate = 60
+
+async function getData() {
+  const [summaries, stageAnalysis] = await Promise.all([
+    supabase.from('project_summary_view').select('*'),
+    supabase.from('stage_analysis_view').select('*').order('sort_order'),
+  ])
+  return {
+    summaries: (summaries.data ?? []) as ProjectSummary[],
+    stageAnalysis: (stageAnalysis.data ?? []) as StageAnalysis[],
+  }
+}
+
+export default async function OverviewPage() {
+  const { summaries, stageAnalysis } = await getData()
+
+  const totalProjects = summaries.length
+  const active = summaries.filter(p => p.status === 'active').length
+  const completed = summaries.filter(p => p.status === 'completed').length
+
+  let totalMilestones = 0, onTime = 0, inBuffer = 0, delayed = 0
+  summaries.forEach(p => {
+    totalMilestones += p.stages_on_time + p.stages_in_buffer + p.stages_delayed
+    onTime   += p.stages_on_time
+    inBuffer += p.stages_in_buffer
+    delayed  += p.stages_delayed
+  })
+
+  const pct = (n: number) =>
+    totalMilestones > 0 ? `${Math.round((n / totalMilestones) * 100)}%` : '—'
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-lg font-semibold text-gray-900">Overview</h1>
+        <p className="text-sm text-gray-500 mt-0.5">
+          {totalProjects} projects · {totalMilestones} milestones tracked
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard
+          label="Total Projects"
+          value={totalProjects}
+          sub={`${active} active · ${completed} handed over`}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <KpiCard
+          label="On Time"
+          value={pct(onTime)}
+          sub={`${onTime} milestones`}
+          color="text-green-700"
+        />
+        <KpiCard
+          label="Within Buffer"
+          value={pct(inBuffer)}
+          sub="≤7 day overrun"
+          color="text-amber-700"
+        />
+        <KpiCard
+          label="Delayed"
+          value={pct(delayed)}
+          sub={`${delayed} overdue`}
+          color="text-red-700"
+        />
+      </div>
+
+      <OverviewCharts stageAnalysis={stageAnalysis} summaries={summaries} />
     </div>
-  );
+  )
 }
