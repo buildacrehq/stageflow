@@ -25,11 +25,11 @@ export const STATUS_COLORS = {
 }
 
 export const CHART_COLORS = {
-  primary:  '#3B82F6',
-  green:    '#22C55E',
+  primary:  '#15803d',
+  green:    '#16a34a',
   amber:    '#F59E0B',
   red:      '#EF4444',
   target:   '#EF4444',
   purple:   '#8B5CF6',
-  teal:     '#14B8A6',
+  teal:     '#0d9488',
 }

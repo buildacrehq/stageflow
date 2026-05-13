@@ -15,10 +15,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-full flex">
+      <body className="min-h-full bg-gray-50">
         {user && <Navbar userEmail={user.email ?? ''} />}
-        <main className={`flex-1 min-h-screen overflow-y-auto ${!user ? 'w-full' : ''}`}>
-          <div className={user ? 'max-w-7xl mx-auto px-6 py-6' : ''}>
+        <main className={user ? 'md:ml-56 pt-14 md:pt-0 min-h-screen' : 'min-h-screen'}>
+          <div className={user ? 'px-4 md:px-6 py-4 md:py-6 max-w-7xl mx-auto' : ''}>
             {children}
           </div>
         </main>

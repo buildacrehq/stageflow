@@ -1,9 +1,8 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Building2 } from 'lucide-react'
 import { signIn } from '@/app/actions'
-import { Suspense } from 'react'
 
 function LoginForm() {
   const [error, setError] = useState<string | null>(null)
@@ -26,8 +25,8 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-            <Building2 size={20} className="text-white" />
+          <div className="w-11 h-11 rounded-xl bg-green-700 flex items-center justify-center shadow-sm">
+            <Building2 size={22} className="text-white" />
           </div>
           <div>
             <div className="text-xl font-semibold text-gray-900">StageFlow</div>
@@ -54,37 +53,33 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                Email
-              </label>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Email</label>
               <input
                 name="email"
                 type="email"
                 required
                 autoComplete="email"
                 placeholder="you@buildacre.in"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-shadow"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                Password
-              </label>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Password</label>
               <input
                 name="password"
                 type="password"
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-shadow"
               />
             </div>
 
             <button
               type="submit"
               disabled={isPending}
-              className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+              className="w-full py-2.5 bg-green-700 text-white text-sm font-medium rounded-lg hover:bg-green-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2"
             >
               {isPending ? 'Signing in…' : 'Sign in'}
             </button>
@@ -92,7 +87,7 @@ function LoginForm() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-5">
-          Sessions expire after 24 hours automatically.
+          Sessions expire automatically after 24 hours.
         </p>
       </div>
     </div>

@@ -3,7 +3,6 @@ import { useState, useTransition } from 'react'
 import { StatusBadge } from './StatusBadge'
 import { updateStageDate } from '@/app/actions'
 import type { StageStatusRow, StageTarget } from '@/types'
-import { ALL_STAGES } from '@/lib/constants'
 
 interface Props {
   projectId: string
@@ -27,7 +26,7 @@ export function StageEditor({ projectId, stages, targets, mobDate }: Props) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm min-w-160">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50">
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Stage</th>
@@ -48,11 +47,11 @@ export function StageEditor({ projectId, stages, targets, mobDate }: Props) {
             return (
               <tr
                 key={t.stage_name}
-                className={`border-b border-gray-50 transition-colors ${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                className={`border-b border-gray-50 transition-colors ${isEditing ? 'bg-green-50' : 'hover:bg-gray-50'}`}
               >
                 <td className="px-4 py-2.5 font-medium text-gray-800">{t.stage_name}</td>
                 <td className="px-4 py-2.5">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${t.category === 'structure' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${t.category === 'structure' ? 'bg-green-50 text-green-700' : 'bg-purple-50 text-purple-700'}`}>
                     {t.category}
                   </span>
                 </td>
@@ -63,7 +62,7 @@ export function StageEditor({ projectId, stages, targets, mobDate }: Props) {
                         type="date"
                         defaultValue={currentDate}
                         id={`date-${t.stage_name}`}
-                        className="border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="border border-green-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
                       />
                       <button
                         disabled={isPending}
@@ -71,7 +70,7 @@ export function StageEditor({ projectId, stages, targets, mobDate }: Props) {
                           const val = (document.getElementById(`date-${t.stage_name}`) as HTMLInputElement).value
                           handleSave(t.stage_name, val)
                         }}
-                        className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50"
+                        className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50"
                       >
                         Save
                       </button>
@@ -85,7 +84,7 @@ export function StageEditor({ projectId, stages, targets, mobDate }: Props) {
                   ) : (
                     <button
                       onClick={() => setEditing(t.stage_name)}
-                      className="text-left text-gray-700 hover:text-blue-600 transition-colors"
+                      className="text-left text-gray-700 hover:text-green-700 transition-colors"
                     >
                       {currentDate
                         ? new Date(currentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })

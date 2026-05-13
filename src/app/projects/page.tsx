@@ -25,7 +25,7 @@ export default async function ProjectsPage() {
         </div>
         <Link
           href="/projects/new"
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 transition-colors"
         >
           + New Project
         </Link>
@@ -78,7 +78,7 @@ export default async function ProjectsPage() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/projects/${p.id}`}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                        className="text-green-700 hover:text-green-900 text-xs font-medium"
                       >
                         View →
                       </Link>
