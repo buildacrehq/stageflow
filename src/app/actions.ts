@@ -1,6 +1,9 @@
 'use server'
 import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { createAuthClient } from '@/lib/supabase-server'
 
 function getAdminClient() {
   return createClient(
@@ -38,6 +41,37 @@ export async function updateStageTarget(stageName: string, targetDays: number, b
   revalidatePath('/settings')
   revalidatePath('/')
   revalidatePath('/analysis')
+}
+
+export async function signIn(formData: FormData): Promise<{ error?: string }> {
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+
+  const supabase = await createAuthClient()
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) return { error: 'Invalid email or password.' }
+
+  const cookieStore = await cookies()
+  cookieStore.set('sf_login_at', Date.now().toString(), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24,
+    path: '/',
+  })
+
+  redirect('/')
+}
+
+export async function signOut() {
+  const supabase = await createAuthClient()
+  await supabase.auth.signOut()
+
+  const cookieStore = await cookies()
+  cookieStore.delete('sf_login_at')
+
+  redirect('/login')
 }
 
 export async function createProject(data: {
