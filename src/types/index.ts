@@ -66,6 +66,14 @@ export interface ProjectSummary {
   created_at: string
 }
 
+export interface ProjectStageOverride {
+  id: string
+  project_id: string
+  stage_name: string
+  target_days: number
+  buffer_days: number
+}
+
 export interface StageAnalysis {
   stage_name: string
   target_days: number

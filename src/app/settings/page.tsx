@@ -16,13 +16,16 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Edit stage target days and buffer — changes affect all project calculations instantly</p>
+        <p className="text-sm text-gray-500 mt-0.5">Global default target days — applied to all projects unless overridden per project</p>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-          <p className="text-sm font-medium text-gray-700">Stage Targets</p>
-          <p className="text-xs text-gray-400">All values in days from Mobilisation</p>
+          <div>
+            <p className="text-sm font-medium text-gray-700">Default Stage Targets</p>
+            <p className="text-xs text-gray-400 mt-0.5">To set different targets for a specific project, open that project and edit its stage targets there</p>
+          </div>
+          <p className="text-xs text-gray-400 shrink-0 ml-4">Days from Mobilisation</p>
         </div>
         <TargetsEditor targets={targets} />
       </div>

@@ -94,6 +94,26 @@ export async function createProject(data: {
   return project.id as string
 }
 
+export async function upsertProjectStageOverride(
+  projectId: string, stageName: string, targetDays: number, bufferDays: number
+) {
+  const sb = getAdminClient()
+  await sb.from('project_stage_overrides').upsert(
+    { project_id: projectId, stage_name: stageName, target_days: targetDays, buffer_days: bufferDays },
+    { onConflict: 'project_id,stage_name' }
+  )
+  revalidatePath(`/projects/${projectId}`)
+}
+
+export async function deleteProjectStageOverride(projectId: string, stageName: string) {
+  const sb = getAdminClient()
+  await sb.from('project_stage_overrides')
+    .delete()
+    .eq('project_id', projectId)
+    .eq('stage_name', stageName)
+  revalidatePath(`/projects/${projectId}`)
+}
+
 export async function updateProject(id: string, data: {
   client_name: string
   location: string | null

@@ -4,30 +4,29 @@ import Link from 'next/link'
 import { ProjectGantt } from '@/components/charts/ProjectGantt'
 import { StageEditor } from '@/components/ui/StageEditor'
 import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
-import type { StageStatusRow, StageTarget } from '@/types'
+import { ProjectTargetsEditor } from '@/components/ui/ProjectTargetsEditor'
+import type { StageStatusRow, StageTarget, ProjectStageOverride } from '@/types'
 
 export const revalidate = 0
 
 async function getData(id: string) {
-  const [projectRes, stagesRes, targetsRes] = await Promise.all([
+  const [projectRes, stagesRes, targetsRes, overridesRes] = await Promise.all([
     supabase.from('projects').select('*').eq('id', id).single(),
-    supabase
-      .from('stage_status_view')
-      .select('*')
-      .eq('project_id', id)
-      .order('sort_order'),
+    supabase.from('stage_status_view').select('*').eq('project_id', id).order('sort_order'),
     supabase.from('stage_targets').select('*').order('sort_order'),
+    supabase.from('project_stage_overrides').select('*').eq('project_id', id),
   ])
   return {
     project: projectRes.data,
     stages: (stagesRes.data ?? []) as StageStatusRow[],
     targets: (targetsRes.data ?? []) as StageTarget[],
+    overrides: (overridesRes.data ?? []) as ProjectStageOverride[],
   }
 }
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { project, stages, targets } = await getData(id)
+  const { project, stages, targets, overrides } = await getData(id)
   if (!project) notFound()
 
   const doneStages = stages.filter(s => s.completed_date)
@@ -85,6 +84,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <p className="text-xs text-gray-400">Click a date to edit</p>
         </div>
         <StageEditor projectId={id} stages={stages} targets={targets} mobDate={project.mob_date} />
+      </div>
+
+      {/* Per-project stage targets */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <p className="text-sm font-medium text-gray-700">Stage target days — this project</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Override target days for this project only. Other projects are not affected.
+            {overrides.length > 0 && <span className="ml-2 text-blue-600 font-medium">{overrides.length} custom override{overrides.length > 1 ? 's' : ''} set</span>}
+          </p>
+        </div>
+        <ProjectTargetsEditor projectId={id} defaults={targets} overrides={overrides} />
       </div>
     </div>
   )
