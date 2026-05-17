@@ -27,9 +27,12 @@ export default async function OverviewPage() {
   const totalProjects = summaries.length
   const active = summaries.filter(p => p.status === 'active').length
   const completed = summaries.filter(p => p.status === 'completed').length
+  const onHold = summaries.filter(p => p.status === 'on_hold').length
 
+  // KPIs only count active projects — completed projects skew the numbers
+  const activeProjects = summaries.filter(p => p.status === 'active')
   let totalMilestones = 0, onTime = 0, inBuffer = 0, delayed = 0
-  summaries.forEach(p => {
+  activeProjects.forEach(p => {
     totalMilestones += p.stages_on_time + p.stages_in_buffer + p.stages_delayed
     onTime   += p.stages_on_time
     inBuffer += p.stages_in_buffer
@@ -90,15 +93,15 @@ export default async function OverviewPage() {
       <div>
         <h1 className="text-lg font-semibold text-gray-900">Overview</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          {totalProjects} projects · {totalMilestones} milestones tracked
+          {totalProjects} projects total · milestone stats show active projects only
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Total Projects" value={totalProjects} sub={`${active} active · ${completed} handed over`} />
-        <KpiCard label="On Time" value={pct(onTime)} sub={`${onTime} milestones`} color="text-green-700" />
-        <KpiCard label="Within Buffer" value={pct(inBuffer)} sub="≤7 day overrun" color="text-amber-700" />
-        <KpiCard label="Delayed" value={pct(delayed)} sub={`${delayed} overdue`} color="text-red-700" />
+        <KpiCard label="Total Projects" value={totalProjects} sub={`${active} active · ${completed} done · ${onHold} on hold`} />
+        <KpiCard label="On Time" value={pct(onTime)} sub={`${onTime} milestones · active only`} color="text-green-700" />
+        <KpiCard label="Within Buffer" value={pct(inBuffer)} sub={`${inBuffer} milestones · active only`} color="text-amber-700" />
+        <KpiCard label="Delayed" value={pct(delayed)} sub={`${delayed} overdue · active only`} color="text-red-700" />
       </div>
 
       {/* Upcoming deadlines */}
