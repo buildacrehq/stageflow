@@ -30,7 +30,7 @@ function LoginForm() {
           </div>
           <div>
             <div className="text-xl font-semibold text-gray-900">StageFlow</div>
-            <div className="text-xs text-gray-400">Buildacre · Internal</div>
+            <div className="text-xs text-gray-400">BuildAcre · Internal</div>
           </div>
         </div>
 

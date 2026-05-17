@@ -4,7 +4,7 @@ import { Navbar } from '@/components/ui/Navbar'
 import { createAuthClient } from '@/lib/supabase-server'
 
 export const metadata: Metadata = {
-  title: 'StageFlow — Buildacre',
+  title: 'StageFlow — BuildAcre',
   description: 'Construction project stage tracker',
 }
 

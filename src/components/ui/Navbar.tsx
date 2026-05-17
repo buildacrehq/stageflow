@@ -70,7 +70,7 @@ export function Navbar({ userEmail }: { userEmail: string }) {
             </div>
             <div>
               <div className="text-sm font-semibold text-gray-900">StageFlow</div>
-              <div className="text-[10px] text-gray-400">Buildacre</div>
+              <div className="text-[10px] text-gray-400">BuildAcre</div>
             </div>
           </Link>
         </div>
@@ -118,7 +118,7 @@ export function Navbar({ userEmail }: { userEmail: string }) {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-gray-900">StageFlow</div>
-                  <div className="text-[10px] text-gray-400">Buildacre</div>
+                  <div className="text-[10px] text-gray-400">BuildAcre</div>
                 </div>
               </Link>
               <button
