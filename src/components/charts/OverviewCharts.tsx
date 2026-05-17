@@ -99,11 +99,11 @@ export function OverviewCharts({ stageAnalysis, summaries }: Props) {
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <p className="text-sm font-medium text-gray-700 mb-1">Project on-time rate ranking</p>
           <p className="text-xs text-gray-400 mb-4">% milestones on time or within buffer</p>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={Math.max(220, projectData.length * 28)}>
             <BarChart data={projectData} layout="vertical" margin={{ left: 8, right: 8, top: 4, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={160} />
               <Tooltip formatter={(v) => [`${Number(v)}%`]} />
               <Bar dataKey="pct" name="On-time %" radius={[0, 3, 3, 0]}>
                 {projectData.map((d, i) => (
