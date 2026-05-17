@@ -1,6 +1,7 @@
 -- ============================================================
 -- PROFILES TABLE — Run after schema.sql
 -- Extends Supabase auth.users with name + role
+-- Trigger verified working: 2026-05-17
 -- ============================================================
 
 create table if not exists profiles (
