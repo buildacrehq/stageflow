@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-export const supabase = createClient(url, anon)
+// Server-only client — uses service role key so RLS doesn't block reads.
+// Only imported in server components; never exposed to the browser.
+export const supabase = createClient(url, serviceKey)

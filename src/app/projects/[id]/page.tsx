@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ProjectGantt } from '@/components/charts/ProjectGantt'
 import { StageEditor } from '@/components/ui/StageEditor'
+import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
 import type { StageStatusRow, StageTarget } from '@/types'
 
 export const revalidate = 0
@@ -73,6 +74,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <p className="text-sm font-medium text-gray-700 mb-4">Stage timeline</p>
         <ProjectGantt stages={stages} />
       </div>
+
+      {/* Per-project analysis */}
+      <ProjectAnalysis stages={stages} targets={targets} mobDate={project.mob_date} />
 
       {/* Stage table with edit */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
