@@ -139,7 +139,7 @@ export function OverviewCharts({ stageAnalysis, summaries }: Props) {
                     key={i}
                     fill={
                       d.pct === null ? '#D1D5DB'
-                      : d.pct >= 70 ? CHART_COLORS.purple
+                      : d.pct >= 70 ? CHART_COLORS.green
                       : d.pct >= 50 ? CHART_COLORS.amber
                       : CHART_COLORS.red
                     }

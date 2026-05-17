@@ -125,10 +125,10 @@ export function AnalysisCharts({
           <div className="space-y-2">
             {bestProjects.map(p => (
               <div key={p.id} className="flex items-center justify-between">
-                <Link href={`/projects/${p.id}`} className="text-xs text-gray-700 hover:text-blue-600 truncate max-w-[120px]">
+                <Link href={`/projects/${p.id}`} className="text-xs text-gray-700 hover:text-blue-600 truncate">
                   {p.client_name}
                 </Link>
-                <span className="text-xs font-medium text-green-700">{p.on_time_pct}%</span>
+                <span className="text-xs font-medium text-green-700 shrink-0 ml-2">{p.on_time_pct}%</span>
               </div>
             ))}
           </div>
@@ -139,10 +139,10 @@ export function AnalysisCharts({
           <div className="space-y-2">
             {worstProjects.map(p => (
               <div key={p.id} className="flex items-center justify-between">
-                <Link href={`/projects/${p.id}`} className="text-xs text-gray-700 hover:text-blue-600 truncate max-w-[120px]">
+                <Link href={`/projects/${p.id}`} className="text-xs text-gray-700 hover:text-blue-600 truncate">
                   {p.client_name}
                 </Link>
-                <span className="text-xs font-medium text-red-700">{p.on_time_pct}%</span>
+                <span className="text-xs font-medium text-red-700 shrink-0 ml-2">{p.on_time_pct}%</span>
               </div>
             ))}
           </div>
