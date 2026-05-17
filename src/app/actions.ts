@@ -114,6 +114,14 @@ export async function deleteProjectStageOverride(projectId: string, stageName: s
   revalidatePath(`/projects/${projectId}`)
 }
 
+export async function deleteProject(id: string) {
+  const sb = getAdminClient()
+  await sb.from('projects').delete().eq('id', id)
+  revalidatePath('/projects')
+  revalidatePath('/')
+  redirect('/projects')
+}
+
 export async function updateProject(id: string, data: {
   client_name: string
   location: string | null

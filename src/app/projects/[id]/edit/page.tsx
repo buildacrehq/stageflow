@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { ProjectForm } from '@/components/ui/ProjectForm'
+import { DeleteProjectButton } from '@/components/ui/DeleteProjectButton'
 import Link from 'next/link'
 import type { Project } from '@/types'
 
@@ -20,8 +21,15 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
           <p className="text-sm text-gray-500 mt-0.5">{project.client_name}</p>
         </div>
       </div>
+
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <ProjectForm project={project as Project} />
+      </div>
+
+      <div className="bg-white border border-red-100 rounded-xl p-5">
+        <p className="text-sm font-medium text-gray-700 mb-1">Danger zone</p>
+        <p className="text-xs text-gray-400 mb-4">Permanently deletes this project and all its stage data. This cannot be undone.</p>
+        <DeleteProjectButton projectId={id} clientName={project.client_name} />
       </div>
     </div>
   )
