@@ -80,6 +80,7 @@ export async function createProject(data: {
   client_name: string
   location: string | null
   mob_date: string | null
+  floors?: string | null
   status?: string
   notes?: string | null
 }) {
@@ -128,6 +129,7 @@ export async function updateProject(id: string, data: {
   client_name: string
   location: string | null
   mob_date: string | null
+  floors: string | null
   status: string
   notes: string | null
 }) {

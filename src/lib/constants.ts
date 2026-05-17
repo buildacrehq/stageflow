@@ -17,6 +17,14 @@ export const FINISHING_STAGES = [
 
 export const ALL_STAGES = [...STRUCTURE_STAGES, ...FINISHING_STAGES]
 
+// Returns structure stage names visible for a given floor count.
+// null floors = show all (safe default for existing projects).
+const FLOOR_CUTOFF: Record<string, number> = { 'G': 4, 'G+1': 6, 'G+2': 8, 'G+3': 10, 'G+4': 12 }
+export function visibleStructureStages(floors: string | null): string[] {
+  const cutoff = floors ? (FLOOR_CUTOFF[floors] ?? 12) : 12
+  return STRUCTURE_STAGES.slice(0, cutoff)
+}
+
 export const STATUS_COLORS = {
   on_time: { bg: 'bg-green-100', text: 'text-green-800', dot: '#3B6D11', badge: 'bg-green-100 text-green-800' },
   buffer:  { bg: 'bg-amber-100', text: 'text-amber-800', dot: '#854F0B', badge: 'bg-amber-100 text-amber-800' },

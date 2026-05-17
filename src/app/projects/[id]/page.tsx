@@ -57,6 +57,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             {project.mob_date
               ? new Date(project.mob_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
               : 'Not set'}
+            {project.floors && <span className="ml-2 text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{project.floors}</span>}
           </p>
           {project.notes && <p className="text-xs text-gray-400 mt-1 italic">{project.notes}</p>}
         </div>
@@ -79,7 +80,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       </div>
 
       {/* Per-project analysis */}
-      <ProjectAnalysis stages={stages} targets={targets} mobDate={project.mob_date} />
+      <ProjectAnalysis stages={stages} targets={targets} mobDate={project.mob_date} floors={project.floors} />
 
       {/* Stage table with edit */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -87,7 +88,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <p className="text-sm font-medium text-gray-700">Stage details</p>
           <p className="text-xs text-gray-400">Click a date to edit</p>
         </div>
-        <StageEditor projectId={id} stages={stages} targets={targets} mobDate={project.mob_date} stageNotes={stageNotes} />
+        <StageEditor projectId={id} stages={stages} targets={targets} mobDate={project.mob_date} floors={project.floors} stageNotes={stageNotes} />
       </div>
 
       {/* Per-project stage targets */}

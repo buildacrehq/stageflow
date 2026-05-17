@@ -4,21 +4,26 @@ import {
   ResponsiveContainer, Cell, ReferenceLine,
 } from 'recharts'
 import type { StageStatusRow, StageTarget } from '@/types'
-import { CHART_COLORS } from '@/lib/constants'
+import { CHART_COLORS, visibleStructureStages } from '@/lib/constants'
 
 interface Props {
   stages: StageStatusRow[]
   targets: StageTarget[]
   mobDate: string | null
+  floors: string | null
 }
 
-export function ProjectAnalysis({ stages, targets, mobDate }: Props) {
+export function ProjectAnalysis({ stages, targets, mobDate, floors }: Props) {
+  const allowedStructure = new Set(visibleStructureStages(floors))
+  const visibleTargets = targets.filter(t =>
+    t.category === 'finishing' || allowedStructure.has(t.stage_name)
+  )
   const completedMap = new Map(stages.map(s => [s.stage_name, s]))
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   // Actual vs target chart for completed stages
-  const completedData = targets
+  const completedData = visibleTargets
     .filter(t => completedMap.has(t.stage_name))
     .map(t => {
       const s = completedMap.get(t.stage_name)!
@@ -36,7 +41,7 @@ export function ProjectAnalysis({ stages, targets, mobDate }: Props) {
 
   // Upcoming stages forecast
   const upcoming = mobDate
-    ? targets
+    ? visibleTargets
         .filter(t => !completedMap.has(t.stage_name))
         .slice(0, 8)
         .map(t => {

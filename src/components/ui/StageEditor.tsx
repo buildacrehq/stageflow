@@ -2,6 +2,7 @@
 import { useState, useTransition } from 'react'
 import { StatusBadge } from './StatusBadge'
 import { updateStageDate } from '@/app/actions'
+import { visibleStructureStages } from '@/lib/constants'
 import type { StageStatusRow, StageTarget } from '@/types'
 
 const DELAY_REASONS = [
@@ -20,10 +21,11 @@ interface Props {
   stages: StageStatusRow[]
   targets: StageTarget[]
   mobDate: string | null
+  floors: string | null
   stageNotes: Record<string, string | null>
 }
 
-export function StageEditor({ projectId, stages, targets, mobDate, stageNotes }: Props) {
+export function StageEditor({ projectId, stages, targets, mobDate, floors, stageNotes }: Props) {
   const [editing, setEditing] = useState<string | null>(null)
   const [noteValues, setNoteValues] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(stageNotes).map(([k, v]) => [k, v ?? '']))
@@ -31,6 +33,10 @@ export function StageEditor({ projectId, stages, targets, mobDate, stageNotes }:
   const [isPending, startTransition] = useTransition()
 
   const stageMap = Object.fromEntries(stages.map(s => [s.stage_name, s]))
+  const allowedStructure = new Set(visibleStructureStages(floors))
+  const visibleTargets = targets.filter(t =>
+    t.category === 'finishing' || allowedStructure.has(t.stage_name)
+  )
 
   function handleSave(stageName: string, date: string) {
     startTransition(async () => {
@@ -54,7 +60,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, stageNotes }:
           </tr>
         </thead>
         <tbody>
-          {targets.map(t => {
+          {visibleTargets.map(t => {
             const s = stageMap[t.stage_name]
             const isEditing = editing === t.stage_name
             const currentDate = s?.completed_date ?? ''

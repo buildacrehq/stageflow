@@ -17,6 +17,7 @@ export interface Project {
   client_name: string
   location: string | null
   mob_date: string | null
+  floors: string | null
   status: ProjectStatus
   notes: string | null
   created_at: string

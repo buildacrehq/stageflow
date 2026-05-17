@@ -17,6 +17,7 @@ export function ProjectForm({ project }: { project?: Project }) {
       client_name: fd.get('client_name') as string,
       location: (fd.get('location') as string) || null,
       mob_date: (fd.get('mob_date') as string) || null,
+      floors: (fd.get('floors') as string) || null,
       status: fd.get('status') as string,
       notes: (fd.get('notes') as string) || null,
     }
@@ -63,6 +64,17 @@ export function ProjectForm({ project }: { project?: Project }) {
             <option value="active">Active</option>
             <option value="completed">Completed</option>
             <option value="on_hold">On Hold</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">Number of floors</label>
+          <select name="floors" defaultValue={project?.floors ?? ''} className={inputCls + ' bg-white'}>
+            <option value="">Not set (show all stages)</option>
+            <option value="G">G — Ground floor only</option>
+            <option value="G+1">G+1 — 1 upper floor</option>
+            <option value="G+2">G+2 — 2 upper floors</option>
+            <option value="G+3">G+3 — 3 upper floors</option>
+            <option value="G+4">G+4 — 4 upper floors</option>
           </select>
         </div>
       </div>
