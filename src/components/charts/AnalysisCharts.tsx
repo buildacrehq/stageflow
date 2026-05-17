@@ -15,7 +15,7 @@ interface Props {
   atRisk: ProjectSummary[]
   bestProjects: ProjectSummary[]
   worstProjects: ProjectSummary[]
-  locationData: { loc: string; total: number; delayed: number; onTime: number; delayRate: number }[]
+  locationData: { loc: string; total: number; avgDelay: number; projects: string[] }[]
 }
 
 export function AnalysisCharts({
@@ -94,23 +94,23 @@ export function AnalysisCharts({
           </ResponsiveContainer>
         </div>
 
-        {/* Location delay rate */}
+        {/* Location avg delay */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <p className="text-sm font-medium text-gray-700 mb-1">Delay rate by location</p>
-          <p className="text-xs text-gray-400 mb-4">% of projects in each area with delayed stages</p>
-          <ResponsiveContainer width="100%" height={220}>
+          <p className="text-sm font-medium text-gray-700 mb-1">Avg delay days by location</p>
+          <p className="text-xs text-gray-400 mb-4">Average max delay days per project in each area</p>
+          <ResponsiveContainer width="100%" height={Math.max(220, locationData.slice(0, 10).length * 32)}>
             <BarChart
               data={locationData.slice(0, 10)}
               layout="vertical"
               margin={{ left: 80, right: 16, top: 4, bottom: 4 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10 }} unit="%" domain={[0, 100]} />
+              <XAxis type="number" tick={{ fontSize: 10 }} unit="d" domain={[0, 'auto']} />
               <YAxis type="category" dataKey="loc" tick={{ fontSize: 10 }} width={80} />
-              <Tooltip formatter={(v) => [`${Number(v)}%`]} />
-              <Bar dataKey="delayRate" name="Delay rate" radius={[0, 3, 3, 0]}>
+              <Tooltip formatter={(v) => [`${Number(v)}d`, 'Avg delay']} />
+              <Bar dataKey="avgDelay" name="Avg delay" radius={[0, 3, 3, 0]}>
                 {locationData.slice(0, 10).map((d, i) => (
-                  <Cell key={i} fill={d.delayRate > 60 ? CHART_COLORS.red : d.delayRate > 30 ? CHART_COLORS.amber : CHART_COLORS.green} />
+                  <Cell key={i} fill={d.avgDelay > 30 ? CHART_COLORS.red : d.avgDelay > 15 ? CHART_COLORS.amber : CHART_COLORS.green} />
                 ))}
               </Bar>
             </BarChart>

@@ -42,18 +42,24 @@ export default async function AnalysisPage() {
     .sort((a, b) => (a.on_time_pct ?? 100) - (b.on_time_pct ?? 100))
     .slice(0, 5)
 
-  // Location analysis
-  const locationMap: Record<string, { total: number; delayed: number; onTime: number }> = {}
+  // Location analysis — avg max delay days per project (more useful than binary has-delay)
+  const locationMap: Record<string, { total: number; totalDelay: number; projects: string[] }> = {}
   summaries.forEach(p => {
-    const loc = p.location ?? 'Unknown'
-    if (!locationMap[loc]) locationMap[loc] = { total: 0, delayed: 0, onTime: 0 }
+    const loc = (p.location && p.location.trim()) ? p.location.trim() : 'Unknown'
+    if (!locationMap[loc]) locationMap[loc] = { total: 0, totalDelay: 0, projects: [] }
     locationMap[loc].total++
-    if (p.stages_delayed > 0) locationMap[loc].delayed++
-    if (p.on_time_pct && p.on_time_pct >= 70) locationMap[loc].onTime++
+    locationMap[loc].totalDelay += p.max_delay_days ?? 0
+    locationMap[loc].projects.push(p.client_name)
   })
   const locationData = Object.entries(locationMap)
-    .map(([loc, d]) => ({ loc, ...d, delayRate: Math.round((d.delayed / d.total) * 100) }))
-    .sort((a, b) => b.delayRate - a.delayRate)
+    .map(([loc, d]) => ({
+      loc,
+      total: d.total,
+      avgDelay: Math.round(d.totalDelay / d.total),
+      projects: d.projects,
+    }))
+    .filter(d => d.total >= 1)
+    .sort((a, b) => b.avgDelay - a.avgDelay)
 
   return (
     <div className="space-y-6">
@@ -84,7 +90,7 @@ export default async function AnalysisPage() {
             {locationData[0]?.loc ?? '—'}
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            {locationData[0]?.delayRate ?? 0}% projects have delays
+            Avg +{locationData[0]?.avgDelay ?? 0}d delay · {locationData[0]?.total ?? 0} projects
           </p>
         </div>
       </div>
