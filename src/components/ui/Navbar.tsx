@@ -64,7 +64,7 @@ export function Navbar({ userEmail }: { userEmail: string }) {
       {/* ── Desktop sidebar ─────────────────────────────────── */}
       <aside className="hidden md:flex fixed inset-y-0 left-0 w-56 bg-white border-r border-gray-200 flex-col z-20">
         <div className="px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="w-7 h-7 rounded-lg bg-green-700 flex items-center justify-center">
               <Building2 size={14} className="text-white" />
             </div>
@@ -72,7 +72,7 @@ export function Navbar({ userEmail }: { userEmail: string }) {
               <div className="text-sm font-semibold text-gray-900">StageFlow</div>
               <div className="text-[10px] text-gray-400">Buildacre</div>
             </div>
-          </div>
+          </Link>
         </div>
 
         <NavLinks path={path} />
@@ -87,12 +87,12 @@ export function Navbar({ userEmail }: { userEmail: string }) {
 
       {/* ── Mobile top bar ──────────────────────────────────── */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <div className="w-7 h-7 rounded-lg bg-green-700 flex items-center justify-center">
             <Building2 size={14} className="text-white" />
           </div>
           <span className="text-sm font-semibold text-gray-900">StageFlow</span>
-        </div>
+        </Link>
         <button
           onClick={() => setDrawerOpen(true)}
           className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
@@ -112,7 +112,7 @@ export function Navbar({ userEmail }: { userEmail: string }) {
           {/* Drawer panel */}
           <div className="absolute inset-y-0 left-0 w-64 bg-white flex flex-col shadow-xl">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <Link href="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <div className="w-7 h-7 rounded-lg bg-green-700 flex items-center justify-center">
                   <Building2 size={14} className="text-white" />
                 </div>
@@ -120,7 +120,7 @@ export function Navbar({ userEmail }: { userEmail: string }) {
                   <div className="text-sm font-semibold text-gray-900">StageFlow</div>
                   <div className="text-[10px] text-gray-400">Buildacre</div>
                 </div>
-              </div>
+              </Link>
               <button
                 onClick={() => setDrawerOpen(false)}
                 className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
