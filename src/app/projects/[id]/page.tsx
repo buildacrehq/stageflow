@@ -10,23 +10,27 @@ import type { StageStatusRow, StageTarget, ProjectStageOverride } from '@/types'
 export const revalidate = 0
 
 async function getData(id: string) {
-  const [projectRes, stagesRes, targetsRes, overridesRes] = await Promise.all([
+  const [projectRes, stagesRes, targetsRes, overridesRes, stageNotesRes] = await Promise.all([
     supabase.from('projects').select('*').eq('id', id).single(),
     supabase.from('stage_status_view').select('*').eq('project_id', id).order('sort_order'),
     supabase.from('stage_targets').select('*').order('sort_order'),
     supabase.from('project_stage_overrides').select('*').eq('project_id', id),
+    supabase.from('project_stages').select('stage_name, notes').eq('project_id', id),
   ])
   return {
     project: projectRes.data,
     stages: (stagesRes.data ?? []) as StageStatusRow[],
     targets: (targetsRes.data ?? []) as StageTarget[],
     overrides: (overridesRes.data ?? []) as ProjectStageOverride[],
+    stageNotes: Object.fromEntries(
+      (stageNotesRes.data ?? []).map(r => [r.stage_name, r.notes as string | null])
+    ) as Record<string, string | null>,
   }
 }
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { project, stages, targets, overrides } = await getData(id)
+  const { project, stages, targets, overrides, stageNotes } = await getData(id)
   if (!project) notFound()
 
   const doneStages = stages.filter(s => s.completed_date)
@@ -83,7 +87,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <p className="text-sm font-medium text-gray-700">Stage details</p>
           <p className="text-xs text-gray-400">Click a date to edit</p>
         </div>
-        <StageEditor projectId={id} stages={stages} targets={targets} mobDate={project.mob_date} />
+        <StageEditor projectId={id} stages={stages} targets={targets} mobDate={project.mob_date} stageNotes={stageNotes} />
       </div>
 
       {/* Per-project stage targets */}

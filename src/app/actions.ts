@@ -12,17 +12,19 @@ function getAdminClient() {
   )
 }
 
-export async function updateStageDate(projectId: string, stageName: string, date: string | null) {
+export async function updateStageDate(
+  projectId: string, stageName: string, date: string | null, notes?: string | null
+) {
   const sb = getAdminClient()
 
   if (date) {
     await sb.from('project_stages').upsert(
-      { project_id: projectId, stage_name: stageName, completed_date: date },
+      { project_id: projectId, stage_name: stageName, completed_date: date, notes: notes ?? null },
       { onConflict: 'project_id,stage_name' }
     )
   } else {
     await sb.from('project_stages')
-      .update({ completed_date: null })
+      .update({ completed_date: null, notes: notes ?? null })
       .eq('project_id', projectId)
       .eq('stage_name', stageName)
   }
