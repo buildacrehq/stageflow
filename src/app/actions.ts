@@ -34,11 +34,32 @@ export async function updateStageDate(
   revalidatePath('/')
 }
 
-export async function updateStageTarget(stageName: string, targetDays: number, bufferDays: number) {
+export async function updateStageTargetDuration(
+  stageName: string, duration: number, bufferDays: number
+) {
   const sb = getAdminClient()
-  await sb.from('stage_targets')
-    .update({ target_days: targetDays, buffer_days: bufferDays })
-    .eq('stage_name', stageName)
+  const { data: all } = await sb.from('stage_targets').select('*').order('sort_order')
+  if (!all) return
+
+  const idx = all.findIndex(t => t.stage_name === stageName)
+  if (idx === -1) return
+
+  const prevCumulative = idx > 0 ? all[idx - 1].target_days : 0
+  const newCumulative = prevCumulative + duration
+  const delta = newCumulative - all[idx].target_days
+
+  // Update this stage and cascade-shift all subsequent stages
+  const updates = all.slice(idx).map(t => ({
+    stage_name: t.stage_name,
+    target_days: t.target_days + delta,
+    buffer_days: t.stage_name === stageName ? bufferDays : t.buffer_days,
+  }))
+
+  for (const u of updates) {
+    await sb.from('stage_targets')
+      .update({ target_days: u.target_days, buffer_days: u.buffer_days })
+      .eq('stage_name', u.stage_name)
+  }
 
   revalidatePath('/settings')
   revalidatePath('/')

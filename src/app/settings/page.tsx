@@ -25,7 +25,7 @@ export default async function SettingsPage() {
             <p className="text-sm font-medium text-gray-700">Default Stage Targets</p>
             <p className="text-xs text-gray-400 mt-0.5">To set different targets for a specific project, open that project and edit its stage targets there</p>
           </div>
-          <p className="text-xs text-gray-400 shrink-0 ml-4">Days from Mobilisation</p>
+          <p className="text-xs text-gray-400 shrink-0 ml-4">Duration per stage · Mob+ auto-calculated</p>
         </div>
         <TargetsEditor targets={targets} />
       </div>

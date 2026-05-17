@@ -9,23 +9,64 @@ interface Props {
   overrides: ProjectStageOverride[]
 }
 
+// Effective cumulative target_days for each stage (override wins over default)
+function effectiveCumulatives(
+  defaults: StageTarget[],
+  overrideMap: Record<string, ProjectStageOverride>
+): Record<string, number> {
+  return Object.fromEntries(
+    defaults.map(d => [d.stage_name, overrideMap[d.stage_name]?.target_days ?? d.target_days])
+  )
+}
+
+// Duration = effective cumulative - previous stage's effective cumulative
+function toDurations(
+  defaults: StageTarget[],
+  cumulatives: Record<string, number>
+): Record<string, number> {
+  return Object.fromEntries(
+    defaults.map((d, i) => {
+      const prev = i > 0 ? cumulatives[defaults[i - 1].stage_name] : 0
+      return [d.stage_name, cumulatives[d.stage_name] - prev]
+    })
+  )
+}
+
 export function ProjectTargetsEditor({ projectId, defaults, overrides }: Props) {
   const overrideMap = Object.fromEntries(overrides.map(o => [o.stage_name, o]))
 
-  const [editing, setEditing] = useState<string | null>(null)
-  const [values, setValues] = useState<Record<string, { target: number; buffer: number }>>(
+  const initCumulatives = effectiveCumulatives(defaults, overrideMap)
+  const initDurations = toDurations(defaults, initCumulatives)
+
+  const [durations, setDurations] = useState<Record<string, number>>(initDurations)
+  const [buffers, setBuffers] = useState<Record<string, number>>(
     Object.fromEntries(defaults.map(d => {
       const ov = overrideMap[d.stage_name]
-      return [d.stage_name, { target: ov?.target_days ?? d.target_days, buffer: ov?.buffer_days ?? d.buffer_days }]
+      return [d.stage_name, ov?.buffer_days ?? d.buffer_days]
     }))
   )
+  const [editing, setEditing] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState<string | null>(null)
+  const [customSet, setCustomSet] = useState<Record<string, boolean>>(
+    Object.fromEntries(defaults.map(d => [d.stage_name, !!overrideMap[d.stage_name]]))
+  )
+
+  // Compute live cumulative for a stage from current durations state
+  function getCumulative(stageName: string): number {
+    let sum = 0
+    for (const d of defaults) {
+      sum += durations[d.stage_name] ?? 0
+      if (d.stage_name === stageName) break
+    }
+    return sum
+  }
 
   function handleSave(stageName: string) {
-    const v = values[stageName]
+    const newCumulative = getCumulative(stageName)
     startTransition(async () => {
-      await upsertProjectStageOverride(projectId, stageName, v.target, v.buffer)
+      await upsertProjectStageOverride(projectId, stageName, newCumulative, buffers[stageName])
+      setCustomSet(prev => ({ ...prev, [stageName]: true }))
       setEditing(null)
       setSaved(stageName)
       setTimeout(() => setSaved(null), 2000)
@@ -34,9 +75,16 @@ export function ProjectTargetsEditor({ projectId, defaults, overrides }: Props) 
 
   function handleReset(stageName: string) {
     const def = defaults.find(d => d.stage_name === stageName)!
+    // Recompute default duration = def.target_days - prev default target_days
+    const defIdx = defaults.findIndex(d => d.stage_name === stageName)
+    const prevDefCumulative = defIdx > 0 ? defaults[defIdx - 1].target_days : 0
+    const defDuration = def.target_days - prevDefCumulative
+
     startTransition(async () => {
       await deleteProjectStageOverride(projectId, stageName)
-      setValues(prev => ({ ...prev, [stageName]: { target: def.target_days, buffer: def.buffer_days } }))
+      setDurations(prev => ({ ...prev, [stageName]: defDuration }))
+      setBuffers(prev => ({ ...prev, [stageName]: def.buffer_days }))
+      setCustomSet(prev => ({ ...prev, [stageName]: false }))
       setEditing(null)
       setSaved(stageName)
       setTimeout(() => setSaved(null), 2000)
@@ -50,18 +98,22 @@ export function ProjectTargetsEditor({ projectId, defaults, overrides }: Props) 
           <tr className="border-b border-gray-100">
             <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-400">Stage</th>
             <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-400">Type</th>
-            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Target days</th>
-            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Buffer days</th>
-            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Deadline = Mob +</th>
+            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Duration (days)</th>
+            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Buffer (days)</th>
+            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Mob + (total)</th>
             <th className="px-4 py-2.5"></th>
           </tr>
         </thead>
         <tbody>
-          {defaults.map(d => {
-            const isCustom = !!overrideMap[d.stage_name]
+          {defaults.map((d, idx) => {
+            const isCustom = customSet[d.stage_name]
             const isEditing = editing === d.stage_name
             const justSaved = saved === d.stage_name
-            const v = values[d.stage_name]
+            const cumulative = getCumulative(d.stage_name)
+
+            // Default duration for tooltip
+            const prevDefCumulative = idx > 0 ? defaults[idx - 1].target_days : 0
+            const defDuration = d.target_days - prevDefCumulative
 
             return (
               <tr key={d.stage_name} className={`border-b border-gray-50 transition-colors ${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
@@ -73,7 +125,7 @@ export function ProjectTargetsEditor({ projectId, defaults, overrides }: Props) 
                     )}
                   </div>
                   {isCustom && !isEditing && (
-                    <p className="text-xs text-gray-400 mt-0.5">default: {d.target_days}d + {d.buffer_days}d buffer</p>
+                    <p className="text-xs text-gray-400 mt-0.5">default: {defDuration}d + {d.buffer_days}d buffer</p>
                   )}
                 </td>
                 <td className="px-5 py-2.5">
@@ -85,30 +137,33 @@ export function ProjectTargetsEditor({ projectId, defaults, overrides }: Props) 
                   {isEditing ? (
                     <input
                       type="number"
-                      value={v.target}
+                      value={durations[d.stage_name]}
                       min={1}
-                      onChange={e => setValues(prev => ({ ...prev, [d.stage_name]: { ...prev[d.stage_name], target: +e.target.value } }))}
+                      onChange={e => setDurations(prev => ({ ...prev, [d.stage_name]: +e.target.value }))}
                       className="w-20 border border-blue-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-600"
                     />
                   ) : (
-                    <span className={`font-medium ${isCustom ? 'text-blue-700' : 'text-gray-700'}`}>{v.target}d</span>
+                    <span className={`font-medium ${isCustom ? 'text-blue-700' : 'text-gray-700'}`}>{durations[d.stage_name]}d</span>
                   )}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {isEditing ? (
                     <input
                       type="number"
-                      value={v.buffer}
+                      value={buffers[d.stage_name]}
                       min={0}
-                      onChange={e => setValues(prev => ({ ...prev, [d.stage_name]: { ...prev[d.stage_name], buffer: +e.target.value } }))}
+                      onChange={e => setBuffers(prev => ({ ...prev, [d.stage_name]: +e.target.value }))}
                       className="w-20 border border-blue-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-600"
                     />
                   ) : (
-                    <span className={isCustom ? 'text-blue-600' : 'text-gray-500'}>{v.buffer}d</span>
+                    <span className={isCustom ? 'text-blue-600' : 'text-gray-500'}>{buffers[d.stage_name]}d</span>
                   )}
                 </td>
                 <td className="px-4 py-2.5 text-center text-xs text-gray-400">
-                  {v.target + v.buffer}d
+                  {cumulative}d
+                  {buffers[d.stage_name] > 0 && (
+                    <span className="text-gray-300"> + {buffers[d.stage_name]}d</span>
+                  )}
                 </td>
                 <td className="px-4 py-2.5 text-right">
                   {isEditing ? (

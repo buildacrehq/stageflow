@@ -1,20 +1,36 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { updateStageTarget } from '@/app/actions'
+import { updateStageTargetDuration } from '@/app/actions'
 import type { StageTarget } from '@/types'
 
-export function TargetsEditor({ targets }: { targets: StageTarget[] }) {
-  const [editing, setEditing] = useState<string | null>(null)
-  const [values, setValues] = useState<Record<string, { target: number; buffer: number }>>(
-    Object.fromEntries(targets.map(t => [t.stage_name, { target: t.target_days, buffer: t.buffer_days }]))
+function toDurations(targets: StageTarget[]): Record<string, number> {
+  return Object.fromEntries(
+    targets.map((t, i) => [t.stage_name, t.target_days - (i > 0 ? targets[i - 1].target_days : 0)])
   )
+}
+
+export function TargetsEditor({ targets }: { targets: StageTarget[] }) {
+  const [durations, setDurations] = useState<Record<string, number>>(toDurations(targets))
+  const [buffers, setBuffers] = useState<Record<string, number>>(
+    Object.fromEntries(targets.map(t => [t.stage_name, t.buffer_days]))
+  )
+  const [editing, setEditing] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState<string | null>(null)
 
+  // Compute live cumulative totals from current durations state
+  function getCumulative(stageName: string): number {
+    let sum = 0
+    for (const t of targets) {
+      sum += durations[t.stage_name] ?? 0
+      if (t.stage_name === stageName) break
+    }
+    return sum
+  }
+
   function handleSave(stageName: string) {
-    const v = values[stageName]
     startTransition(async () => {
-      await updateStageTarget(stageName, v.target, v.buffer)
+      await updateStageTargetDuration(stageName, durations[stageName], buffers[stageName])
       setEditing(null)
       setSaved(stageName)
       setTimeout(() => setSaved(null), 2000)
@@ -35,17 +51,17 @@ export function TargetsEditor({ targets }: { targets: StageTarget[] }) {
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-400">Stage</th>
-                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Target days</th>
-                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Buffer days</th>
-                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Deadline = Mob +</th>
+                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Duration (days)</th>
+                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Buffer (days)</th>
+                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Mob + (total)</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
               {items.map(t => {
-                const v = values[t.stage_name]
                 const isEditing = editing === t.stage_name
                 const justSaved = saved === t.stage_name
+                const cumulative = getCumulative(t.stage_name)
 
                 return (
                   <tr key={t.stage_name} className={`border-b border-gray-50 transition-colors ${isEditing ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
@@ -54,30 +70,33 @@ export function TargetsEditor({ targets }: { targets: StageTarget[] }) {
                       {isEditing ? (
                         <input
                           type="number"
-                          value={v.target}
+                          value={durations[t.stage_name]}
                           min={1}
-                          onChange={e => setValues(prev => ({ ...prev, [t.stage_name]: { ...prev[t.stage_name], target: +e.target.value } }))}
+                          onChange={e => setDurations(prev => ({ ...prev, [t.stage_name]: +e.target.value }))}
                           className="w-20 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                       ) : (
-                        <span className="font-medium text-gray-700">{v.target}d</span>
+                        <span className="font-medium text-gray-700">{durations[t.stage_name]}d</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-center">
                       {isEditing ? (
                         <input
                           type="number"
-                          value={v.buffer}
+                          value={buffers[t.stage_name]}
                           min={0}
-                          onChange={e => setValues(prev => ({ ...prev, [t.stage_name]: { ...prev[t.stage_name], buffer: +e.target.value } }))}
+                          onChange={e => setBuffers(prev => ({ ...prev, [t.stage_name]: +e.target.value }))}
                           className="w-20 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                       ) : (
-                        <span className="text-gray-500">{v.buffer}d</span>
+                        <span className="text-gray-500">{buffers[t.stage_name]}d</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-center text-xs text-gray-400">
-                      {v.target + v.buffer}d
+                      {cumulative}d
+                      {buffers[t.stage_name] > 0 && (
+                        <span className="text-gray-300"> + {buffers[t.stage_name]}d buffer</span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       {isEditing ? (
