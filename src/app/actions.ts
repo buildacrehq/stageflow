@@ -76,8 +76,10 @@ export async function signOut() {
 
 export async function createProject(data: {
   client_name: string
-  location: string
+  location: string | null
   mob_date: string | null
+  status?: string
+  notes?: string | null
 }) {
   const sb = getAdminClient()
   const { data: project, error } = await sb
@@ -88,5 +90,20 @@ export async function createProject(data: {
 
   if (error) throw error
   revalidatePath('/projects')
+  revalidatePath('/')
   return project.id as string
+}
+
+export async function updateProject(id: string, data: {
+  client_name: string
+  location: string | null
+  mob_date: string | null
+  status: string
+  notes: string | null
+}) {
+  const sb = getAdminClient()
+  await sb.from('projects').update(data).eq('id', id)
+  revalidatePath(`/projects/${id}`)
+  revalidatePath('/projects')
+  revalidatePath('/')
 }
