@@ -2,27 +2,31 @@ import { supabase } from '@/lib/supabase'
 import { KpiCard } from '@/components/ui/KpiCard'
 import { OverviewCharts } from '@/components/charts/OverviewCharts'
 import { DeadlinesPanel } from '@/components/ui/DeadlinesPanel'
+import { ProjectProgressPanel } from '@/components/ui/ProjectProgressPanel'
+import { visibleStructureStages, FINISHING_STAGES } from '@/lib/constants'
 import type { ProjectSummary, StageAnalysis } from '@/types'
 
 export const revalidate = 60
 
 async function getData() {
-  const [summaries, stageAnalysis, completedStages, targets] = await Promise.all([
+  const [summaries, stageAnalysis, completedStages, targets, projectFloors] = await Promise.all([
     supabase.from('project_summary_view').select('*'),
     supabase.from('stage_analysis_view').select('*').order('sort_order'),
     supabase.from('project_stages').select('project_id, stage_name').not('completed_date', 'is', null),
     supabase.from('stage_targets').select('stage_name, target_days, sort_order').order('sort_order'),
+    supabase.from('projects').select('id, floors'),
   ])
   return {
     summaries: (summaries.data ?? []) as ProjectSummary[],
     stageAnalysis: (stageAnalysis.data ?? []) as StageAnalysis[],
     completedStages: completedStages.data ?? [],
     targets: targets.data ?? [],
+    floorsMap: Object.fromEntries((projectFloors.data ?? []).map(p => [p.id, p.floors as string | null])),
   }
 }
 
 export default async function OverviewPage() {
-  const { summaries, stageAnalysis, completedStages, targets } = await getData()
+  const { summaries, stageAnalysis, completedStages, targets, floorsMap } = await getData()
 
   const totalProjects = summaries.length
   const active = summaries.filter(p => p.status === 'active').length
@@ -41,13 +45,30 @@ export default async function OverviewPage() {
   const pct = (n: number) =>
     totalMilestones > 0 ? `${Math.round((n / totalMilestones) * 100)}%` : '—'
 
-  // Average delay across active projects (only those with any delay)
   const delayedProjects = activeProjects.filter(p => p.max_delay_days != null && p.max_delay_days > 0)
   const avgDelay = delayedProjects.length > 0
     ? Math.round(delayedProjects.reduce((sum, p) => sum + (p.max_delay_days ?? 0), 0) / delayedProjects.length)
     : 0
 
-  // Build completed stage map
+  // Project completion % — based on floors-aware total stages
+  const projectProgress = activeProjects
+    .map(p => {
+      const floors = floorsMap[p.id] ?? null
+      const totalStages = visibleStructureStages(floors).length + FINISHING_STAGES.length
+      const pct = Math.min(100, Math.round((p.total_stages_done / totalStages) * 100))
+      return {
+        id: p.id,
+        client: p.client_name,
+        stagesDone: p.total_stages_done,
+        totalStages,
+        pct,
+        onTimePct: p.on_time_pct,
+        stagesDelayed: p.stages_delayed,
+      }
+    })
+    .sort((a, b) => b.pct - a.pct)
+
+  // Build completed stage map for deadlines
   const completedMap = new Map<string, Set<string>>()
   completedStages.forEach(({ project_id, stage_name }) => {
     if (!completedMap.has(project_id)) completedMap.set(project_id, new Set())
@@ -81,17 +102,12 @@ export default async function OverviewPage() {
           daysLeft,
           overdue: daysLeft < 0,
         }
-        if (daysLeft < 0) {
-          overdue.push(entry)
-        } else if (dl <= in30) {
-          upcoming.push(entry)
-        }
+        if (daysLeft < 0) overdue.push(entry)
+        else if (dl <= in30) upcoming.push(entry)
       }
     })
 
-  // Overdue: most recently overdue first (least negative = most actionable)
   overdue.sort((a, b) => b.daysLeft - a.daysLeft)
-  // Upcoming: soonest first
   upcoming.sort((a, b) => a.daysLeft - b.daysLeft)
 
   return (
@@ -114,6 +130,8 @@ export default async function OverviewPage() {
           color={avgDelay > 30 ? 'text-red-700' : avgDelay > 15 ? 'text-amber-700' : 'text-gray-700'}
         />
       </div>
+
+      <ProjectProgressPanel projects={projectProgress} />
 
       <DeadlinesPanel overdue={overdue} upcoming={upcoming} />
 
