@@ -5,17 +5,18 @@ import { BarChart2, Building2, LineChart, Settings, LogOut, Menu, X } from 'luci
 import { useTransition, useState } from 'react'
 import { signOut } from '@/app/actions'
 
-const NAV = [
-  { href: '/',         label: 'Overview', icon: BarChart2 },
-  { href: '/projects', label: 'Projects', icon: Building2 },
-  { href: '/analysis', label: 'Analysis', icon: LineChart },
-  { href: '/settings', label: 'Settings', icon: Settings },
+const ALL_NAV = [
+  { href: '/',         label: 'Overview', icon: BarChart2,  adminOnly: false },
+  { href: '/projects', label: 'Projects', icon: Building2,  adminOnly: false },
+  { href: '/analysis', label: 'Analysis', icon: LineChart,  adminOnly: false },
+  { href: '/settings', label: 'Settings', icon: Settings,   adminOnly: true  },
 ]
 
-function NavLinks({ path, onNavigate }: { path: string; onNavigate?: () => void }) {
+function NavLinks({ path, isAdmin, onNavigate }: { path: string; isAdmin: boolean; onNavigate?: () => void }) {
+  const nav = ALL_NAV.filter(n => !n.adminOnly || isAdmin)
   return (
     <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {nav.map(({ href, label, icon: Icon }) => {
         const active = path === href || (href !== '/' && path.startsWith(href))
         return (
           <Link
@@ -50,10 +51,26 @@ function LogoutButton({ isPending, onLogout }: { isPending: boolean; onLogout: (
   )
 }
 
-export function Navbar({ userEmail }: { userEmail: string }) {
+function UserBadge({ email, role }: { email: string; role: 'admin' | 'staff' }) {
+  return (
+    <div className="px-3 py-2 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-between gap-2 mb-0.5">
+        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+          role === 'admin' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'
+        }`}>
+          {role === 'admin' ? 'Admin' : 'Staff'}
+        </span>
+      </div>
+      <p className="text-[10px] text-gray-400 truncate">{email}</p>
+    </div>
+  )
+}
+
+export function Navbar({ userEmail, role }: { userEmail: string; role: 'admin' | 'staff' }) {
   const path = usePathname()
   const [isPending, startTransition] = useTransition()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const isAdmin = role === 'admin'
 
   function handleLogout() {
     startTransition(async () => { await signOut() })
@@ -75,12 +92,10 @@ export function Navbar({ userEmail }: { userEmail: string }) {
           </Link>
         </div>
 
-        <NavLinks path={path} />
+        <NavLinks path={path} isAdmin={isAdmin} />
 
         <div className="px-3 py-3 border-t border-gray-100 space-y-2">
-          <div className="px-3 py-2 bg-gray-50 rounded-lg">
-            <p className="text-[10px] text-gray-400 truncate">{userEmail}</p>
-          </div>
+          <UserBadge email={userEmail} role={role} />
           <LogoutButton isPending={isPending} onLogout={handleLogout} />
         </div>
       </aside>
@@ -104,12 +119,7 @@ export function Navbar({ userEmail }: { userEmail: string }) {
       {/* ── Mobile drawer ───────────────────────────────────── */}
       {drawerOpen && (
         <div className="md:hidden fixed inset-0 z-50">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setDrawerOpen(false)}
-          />
-          {/* Drawer panel */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
           <div className="absolute inset-y-0 left-0 w-64 bg-white flex flex-col shadow-xl">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <Link href="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -121,20 +131,15 @@ export function Navbar({ userEmail }: { userEmail: string }) {
                   <div className="text-[10px] text-gray-400">BuildAcre</div>
                 </div>
               </Link>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
-              >
+              <button onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
                 <X size={18} />
               </button>
             </div>
 
-            <NavLinks path={path} onNavigate={() => setDrawerOpen(false)} />
+            <NavLinks path={path} isAdmin={isAdmin} onNavigate={() => setDrawerOpen(false)} />
 
             <div className="px-3 py-3 border-t border-gray-100 space-y-2">
-              <div className="px-3 py-2 bg-gray-50 rounded-lg">
-                <p className="text-[10px] text-gray-400 truncate">{userEmail}</p>
-              </div>
+              <UserBadge email={userEmail} role={role} />
               <LogoutButton isPending={isPending} onLogout={handleLogout} />
             </div>
           </div>

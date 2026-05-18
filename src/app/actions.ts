@@ -146,6 +146,12 @@ export async function deleteProject(id: string) {
   redirect('/projects')
 }
 
+export async function updateUserRole(userId: string, role: 'admin' | 'staff') {
+  const sb = getAdminClient()
+  await sb.from('profiles').update({ role }).eq('id', userId)
+  revalidatePath('/settings')
+}
+
 export async function updateProject(id: string, data: {
   client_name: string
   location: string | null

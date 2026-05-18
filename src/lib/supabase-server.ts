@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export async function createAuthClient() {
@@ -21,4 +22,21 @@ export async function createAuthClient() {
       },
     }
   )
+}
+
+export async function getCurrentUser() {
+  const supabase = await createAuthClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.user ?? null
+}
+
+export async function getUserRole(): Promise<'admin' | 'staff'> {
+  const user = await getCurrentUser()
+  if (!user) return 'staff'
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  const { data } = await sb.from('profiles').select('role').eq('id', user.id).single()
+  return (data?.role as 'admin' | 'staff') ?? 'staff'
 }
