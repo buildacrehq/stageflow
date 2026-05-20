@@ -6,7 +6,7 @@ import type { StageStatusRow, StageTarget } from '@/types'
 
 export const revalidate = 60
 
-export default async function ClientPage() {
+export default async function ViewerPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 

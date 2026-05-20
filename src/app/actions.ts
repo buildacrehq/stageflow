@@ -89,7 +89,7 @@ export async function signIn(formData: FormData): Promise<{ error?: string }> {
   cookieStore.set('sf_login_at', Date.now().toString(), { ...cookieOpts, maxAge: 60 * 60 * 24 })
   cookieStore.set('sf_role', role, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 })
 
-  if (role === 'client') redirect('/client')
+  if (role === 'viewer') redirect('/viewer')
   redirect('/')
 }
 
@@ -153,10 +153,25 @@ export async function deleteProject(id: string) {
   redirect('/projects')
 }
 
-export async function updateUserRole(userId: string, role: 'admin' | 'staff' | 'client') {
+export async function updateUserRole(userId: string, role: 'admin' | 'staff' | 'viewer') {
   const sb = getAdminClient()
   await sb.from('profiles').update({ role }).eq('id', userId)
   revalidatePath('/settings')
+}
+
+export async function createUser(
+  email: string, password: string, role: 'admin' | 'staff' | 'viewer'
+): Promise<{ error?: string }> {
+  const sb = getAdminClient()
+  const { data, error } = await sb.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+  if (error) return { error: error.message }
+  await sb.from('profiles').insert({ id: data.user.id, email, role })
+  revalidatePath('/settings')
+  return {}
 }
 
 export async function assignClientProject(userId: string, projectId: string) {

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { TargetsEditor } from '@/components/ui/TargetsEditor'
 import { UsersManager } from '@/components/ui/UsersManager'
 import { getUserRole, getCurrentUser } from '@/lib/supabase-server'
+import { AddUserForm } from '@/components/ui/AddUserForm'
 import type { StageTarget } from '@/types'
 
 export const revalidate = 0
@@ -35,7 +36,7 @@ export default async function SettingsPage() {
 
   const users = (usersRes.data ?? []).map(u => ({
     ...u,
-    role: u.role as 'admin' | 'staff' | 'client',
+    role: u.role as 'admin' | 'staff' | 'viewer',
     projectId: clientProjectMap[u.id] ?? null,
   }))
 
@@ -65,10 +66,11 @@ export default async function SettingsPage() {
           </p>
         </div>
         {users.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-gray-400">No users found.</p>
+          <p className="px-5 py-4 text-sm text-gray-400">No users found. Add one below.</p>
         ) : (
           <UsersManager users={users} currentUserId={currentUser?.id ?? ''} projects={projects} />
         )}
+        <AddUserForm />
       </div>
     </div>
   )

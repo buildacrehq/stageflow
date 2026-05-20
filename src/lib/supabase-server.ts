@@ -30,7 +30,7 @@ export async function getCurrentUser() {
   return session?.user ?? null
 }
 
-export async function getUserRole(): Promise<'admin' | 'staff' | 'client'> {
+export async function getUserRole(): Promise<'admin' | 'staff' | 'viewer'> {
   const user = await getCurrentUser()
   if (!user) return 'staff'
   const sb = createClient(

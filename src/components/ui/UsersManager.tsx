@@ -5,7 +5,7 @@ import { updateUserRole, assignClientProject, removeClientProject } from '@/app/
 interface UserProfile {
   id: string
   email: string
-  role: 'admin' | 'staff' | 'client'
+  role: 'admin' | 'staff' | 'viewer'
   projectId?: string | null
 }
 
@@ -24,7 +24,7 @@ export function UsersManager({
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState<string | null>(null)
 
-  function handleRoleChange(user: UserProfile, newRole: 'admin' | 'staff' | 'client') {
+  function handleRoleChange(user: UserProfile, newRole: 'admin' | 'staff' | 'viewer') {
     startTransition(async () => {
       await updateUserRole(user.id, newRole)
       setSaved(user.id)
@@ -44,7 +44,7 @@ export function UsersManager({
   const roleColors: Record<string, string> = {
     admin: 'bg-green-100 text-green-700',
     staff: 'bg-gray-100 text-gray-500',
-    client: 'bg-blue-100 text-blue-700',
+    viewer: 'bg-blue-100 text-blue-700',
   }
 
   return (
@@ -70,19 +70,19 @@ export function UsersManager({
                   <select
                     defaultValue={u.role}
                     disabled={isPending}
-                    onChange={e => handleRoleChange(u, e.target.value as 'admin' | 'staff' | 'client')}
+                    onChange={e => handleRoleChange(u, e.target.value as 'admin' | 'staff' | 'viewer')}
                     className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:opacity-50"
                   >
                     <option value="admin">Admin</option>
                     <option value="staff">Staff</option>
-                    <option value="client">Client</option>
+                    <option value="viewer">Viewer</option>
                   </select>
                 )}
               </div>
             </div>
 
-            {/* Project assignment for client role */}
-            {u.role === 'client' && (
+            {/* Project assignment for viewer role */}
+            {u.role === 'viewer' && (
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-xs text-gray-400">Assigned project:</span>
                 {saved === u.id + '_proj' ? (

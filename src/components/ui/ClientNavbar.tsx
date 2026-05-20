@@ -25,7 +25,7 @@ export function ClientNavbar({ userEmail, projectName }: { userEmail: string; pr
 
         <div className="flex-1 px-3 py-4">
           <Link
-            href="/client"
+            href="/viewer"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm bg-green-50 text-green-700 font-medium"
           >
             <Building2 size={16} />
@@ -35,7 +35,7 @@ export function ClientNavbar({ userEmail, projectName }: { userEmail: string; pr
 
         <div className="px-3 py-3 border-t border-gray-100 space-y-2">
           <div className="px-3 py-2 bg-gray-50 rounded-lg">
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-200 text-gray-500">Client</span>
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">Viewer</span>
             <p className="text-[10px] text-gray-400 truncate mt-0.5">{userEmail}</p>
           </div>
           <button

@@ -6,8 +6,8 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Clients can only access /client and /login
-  if (role === 'client' && pathname !== '/client' && pathname !== '/login') {
-    return NextResponse.redirect(new URL('/client', request.url))
+  if (role === 'viewer' && pathname !== '/viewer' && pathname !== '/login') {
+    return NextResponse.redirect(new URL('/viewer', request.url))
   }
 
   return NextResponse.next()
