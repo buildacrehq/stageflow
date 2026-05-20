@@ -169,7 +169,7 @@ export async function createUser(
     email_confirm: true,
   })
   if (error) return { error: error.message }
-  await sb.from('profiles').insert({ id: data.user.id, email, role })
+  await sb.from('profiles').insert({ id: data.user.id, name: email, role })
   revalidatePath('/settings')
   return {}
 }

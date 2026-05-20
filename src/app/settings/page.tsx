@@ -22,7 +22,7 @@ export default async function SettingsPage() {
 
   const [targetsRes, usersRes, clientProjectsRes, projectsRes] = await Promise.all([
     supabase.from('stage_targets').select('*').order('sort_order'),
-    sb.from('profiles').select('id, email, role').order('created_at'),
+    sb.from('profiles').select('id, name, role').order('created_at'),
     sb.from('client_projects').select('user_id, project_id'),
     supabase.from('projects').select('id, client_name').order('client_name'),
   ])
@@ -35,7 +35,8 @@ export default async function SettingsPage() {
   )
 
   const users = (usersRes.data ?? []).map(u => ({
-    ...u,
+    id: u.id,
+    email: u.name as string,
     role: u.role as 'admin' | 'staff' | 'viewer',
     projectId: clientProjectMap[u.id] ?? null,
   }))
