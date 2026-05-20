@@ -71,19 +71,25 @@ export async function signIn(formData: FormData): Promise<{ error?: string }> {
   const password = formData.get('password') as string
 
   const supabase = await createAuthClient()
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) return { error: 'Invalid email or password.' }
 
+  const sb = getAdminClient()
+  const { data: profile } = await sb.from('profiles').select('role').eq('id', data.user.id).single()
+  const role = (profile?.role as string) ?? 'staff'
+
   const cookieStore = await cookies()
-  cookieStore.set('sf_login_at', Date.now().toString(), {
+  const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24,
+    sameSite: 'lax' as const,
     path: '/',
-  })
+  }
+  cookieStore.set('sf_login_at', Date.now().toString(), { ...cookieOpts, maxAge: 60 * 60 * 24 })
+  cookieStore.set('sf_role', role, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 })
 
+  if (role === 'client') redirect('/client')
   redirect('/')
 }
 
@@ -93,6 +99,7 @@ export async function signOut() {
 
   const cookieStore = await cookies()
   cookieStore.delete('sf_login_at')
+  cookieStore.delete('sf_role')
 
   redirect('/login')
 }
@@ -146,9 +153,24 @@ export async function deleteProject(id: string) {
   redirect('/projects')
 }
 
-export async function updateUserRole(userId: string, role: 'admin' | 'staff') {
+export async function updateUserRole(userId: string, role: 'admin' | 'staff' | 'client') {
   const sb = getAdminClient()
   await sb.from('profiles').update({ role }).eq('id', userId)
+  revalidatePath('/settings')
+}
+
+export async function assignClientProject(userId: string, projectId: string) {
+  const sb = getAdminClient()
+  await sb.from('client_projects').upsert(
+    { user_id: userId, project_id: projectId },
+    { onConflict: 'user_id' }
+  )
+  revalidatePath('/settings')
+}
+
+export async function removeClientProject(userId: string) {
+  const sb = getAdminClient()
+  await sb.from('client_projects').delete().eq('user_id', userId)
   revalidatePath('/settings')
 }
 
