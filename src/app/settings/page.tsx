@@ -62,7 +62,7 @@ export default async function SettingsPage() {
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
           <p className="text-sm font-medium text-gray-700">Users</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            Set roles and assign projects to clients. Staff cannot access Settings. Clients see only their assigned project.
+            Admin · Staff · Viewer — set roles and assign projects to viewers. Staff cannot access Settings.
           </p>
         </div>
         {users.length === 0 ? (
