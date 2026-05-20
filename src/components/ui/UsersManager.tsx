@@ -176,7 +176,6 @@ export function UsersManager({
                 {projError && (
                   <p className="text-xs text-red-600">{projError}</p>
                 )}
-                <p className="text-xs text-gray-300">state: {currentProjectId || 'empty'}</p>
               </div>
             )}
 
