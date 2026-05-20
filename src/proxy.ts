@@ -1,16 +1,43 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-export function proxy(request: NextRequest) {
-  const role = request.cookies.get('sf_role')?.value
+export async function proxy(request: NextRequest) {
+  const response = NextResponse.next()
   const pathname = request.nextUrl.pathname
 
-  // Viewers can only access /viewer and /login
-  if (role === 'viewer' && pathname !== '/viewer' && pathname !== '/login') {
+  if (pathname === '/login') return response
+
+  // Check Supabase session
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // Not logged in — redirect to login
+  if (!session) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  // Viewers can only access /viewer
+  const role = request.cookies.get('sf_role')?.value
+  if (role === 'viewer' && pathname !== '/viewer') {
     return NextResponse.redirect(new URL('/viewer', request.url))
   }
 
-  return NextResponse.next()
+  return response
 }
 
 export const config = {
