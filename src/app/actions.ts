@@ -159,6 +159,28 @@ export async function updateUserRole(userId: string, role: 'admin' | 'staff' | '
   revalidatePath('/settings')
 }
 
+export async function updateUserDetails(
+  userId: string, name: string, password: string
+): Promise<{ error?: string }> {
+  const sb = getAdminClient()
+  await sb.from('profiles').update({ name }).eq('id', userId)
+  if (password) {
+    const { error } = await sb.auth.admin.updateUserById(userId, { password })
+    if (error) return { error: error.message }
+  }
+  revalidatePath('/settings')
+  return {}
+}
+
+export async function deleteUser(userId: string): Promise<{ error?: string }> {
+  const sb = getAdminClient()
+  await sb.from('profiles').delete().eq('id', userId)
+  const { error } = await sb.auth.admin.deleteUser(userId)
+  if (error) return { error: error.message }
+  revalidatePath('/settings')
+  return {}
+}
+
 export async function createUser(
   email: string, password: string, role: 'admin' | 'staff' | 'viewer'
 ): Promise<{ error?: string }> {
@@ -174,19 +196,25 @@ export async function createUser(
   return {}
 }
 
-export async function assignClientProject(userId: string, projectId: string) {
+export async function assignClientProject(userId: string, projectId: string): Promise<{ error?: string }> {
   const sb = getAdminClient()
-  await sb.from('client_projects').upsert(
-    { user_id: userId, project_id: projectId },
-    { onConflict: 'user_id' }
-  )
-  revalidatePath('/settings')
+
+  const { error: delError } = await sb.from('client_projects').delete().eq('user_id', userId)
+  if (delError) return { error: `Delete failed: ${delError.message}` }
+
+  const { data: inserted, error: insError } = await sb
+    .from('client_projects')
+    .insert({ user_id: userId, project_id: projectId })
+    .select()
+  if (insError) return { error: `Insert failed: ${insError.message}` }
+  if (!inserted || inserted.length === 0) return { error: 'Nothing saved — check DB constraints or RLS' }
+
+  return {}
 }
 
 export async function removeClientProject(userId: string) {
   const sb = getAdminClient()
   await sb.from('client_projects').delete().eq('user_id', userId)
-  revalidatePath('/settings')
 }
 
 export async function updateProject(id: string, data: {

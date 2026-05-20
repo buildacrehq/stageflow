@@ -4,7 +4,7 @@ import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
 import { ClientProjectView } from '@/components/ui/ClientProjectView'
 import type { StageStatusRow, StageTarget } from '@/types'
 
-export const revalidate = 60
+export const revalidate = 0
 
 export default async function ViewerPage() {
   const user = await getCurrentUser()
@@ -29,6 +29,14 @@ export default async function ViewerPage() {
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <p className="text-gray-500 font-medium">No project assigned yet</p>
         <p className="text-xs text-gray-400 mt-1">Contact your project manager to get access.</p>
+        <form action="" method="GET" className="mt-4">
+          <button
+            type="submit"
+            className="text-xs text-green-700 hover:text-green-900 font-medium border border-green-200 rounded-lg px-4 py-2"
+          >
+            Check again
+          </button>
+        </form>
       </div>
     )
   }

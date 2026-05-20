@@ -135,7 +135,16 @@ group by st.stage_name, st.target_days, st.buffer_days, st.category, st.sort_ord
 order by st.sort_order;
 
 -- --------------------------------------------------------
--- 7. AUTO-UPDATE updated_at trigger
+-- 7. CLIENT PROJECT ASSIGNMENTS (one project per viewer)
+-- --------------------------------------------------------
+create table if not exists client_projects (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  project_id uuid not null references projects(id) on delete cascade,
+  created_at timestamptz default now()
+);
+
+-- --------------------------------------------------------
+-- 8. AUTO-UPDATE updated_at trigger
 -- --------------------------------------------------------
 create or replace function update_updated_at()
 returns trigger language plpgsql as $$
