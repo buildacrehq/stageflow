@@ -1,10 +1,10 @@
 export const STRUCTURE_STAGES = [
   'Foundation 1', 'Foundation 2',
-  'GF Lintel', 'GF Roof',
-  'FF Lintel', 'FF Roof',
-  'SF Lintel', 'SF Roof',
-  'TF Lintel', 'TF Roof',
-  '4F Lintel', '4F Roof',
+  'GF Wall', 'GF Roof',
+  'FF Wall', 'FF Roof',
+  'SF Wall', 'SF Roof',
+  'TF Wall', 'TF Roof',
+  '4F Wall', '4F Roof',
 ]
 
 export const FINISHING_STAGES = [

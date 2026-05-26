@@ -21,6 +21,7 @@ export interface Project {
   status: ProjectStatus
   notes: string | null
   client_phone: string | null
+  engineer_name: string | null
   engineer_phone: string | null
   project_manager: string | null
   maps_link: string | null

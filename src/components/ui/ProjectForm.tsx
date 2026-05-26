@@ -22,6 +22,7 @@ export function ProjectForm({ project }: { project?: Project }) {
       status: fd.get('status') as string,
       notes: (fd.get('notes') as string) || null,
       client_phone: (fd.get('client_phone') as string) || null,
+      engineer_name: (fd.get('engineer_name') as string) || null,
       engineer_phone: (fd.get('engineer_phone') as string) || null,
       project_manager: (fd.get('project_manager') as string) || null,
       maps_link: showMap ? ((fd.get('maps_link') as string) || null) : null,
@@ -70,7 +71,11 @@ export function ProjectForm({ project }: { project?: Project }) {
             <input name="project_manager" defaultValue={project?.project_manager ?? ''} placeholder="e.g. Suresh Kumar" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Engineer phone</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Site engineer name</label>
+            <input name="engineer_name" defaultValue={project?.engineer_name ?? ''} placeholder="e.g. Ramesh Kumar" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Site engineer phone</label>
             <input name="engineer_phone" type="tel" defaultValue={project?.engineer_phone ?? ''} placeholder="e.g. 9876543210" className={inputCls} />
           </div>
           <div>

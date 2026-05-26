@@ -107,17 +107,19 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         />
       </div>
 
-      {/* Per-project stage targets */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100">
-          <p className="text-sm font-medium text-gray-700">Stage target days — this project</p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Override target days for this project only. Other projects are not affected.
-            {overrides.length > 0 && <span className="ml-2 text-blue-600 font-medium">{overrides.length} custom override{overrides.length > 1 ? 's' : ''} set</span>}
-          </p>
+      {/* Per-project stage targets — admin/staff only */}
+      {(role === 'admin' || role === 'staff') && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <p className="text-sm font-medium text-gray-700">Stage target days — this project</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Override target days for this project only. Other projects are not affected.
+              {overrides.length > 0 && <span className="ml-2 text-blue-600 font-medium">{overrides.length} custom override{overrides.length > 1 ? 's' : ''} set</span>}
+            </p>
+          </div>
+          <ProjectTargetsEditor projectId={id} defaults={targets} overrides={overrides} />
         </div>
-        <ProjectTargetsEditor projectId={id} defaults={targets} overrides={overrides} />
-      </div>
+      )}
     </div>
   )
 }

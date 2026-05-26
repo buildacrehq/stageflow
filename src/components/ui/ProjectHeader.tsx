@@ -108,18 +108,20 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
             </div>
 
             {/* Engineer */}
-            {(project.engineer_phone) && (
+            {(project.engineer_name || project.engineer_phone) && (
               <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                 <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0 mt-0.5">
                   <HardHat size={15} className="text-orange-600" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Site Engineer</p>
-                  <p className="text-sm font-semibold text-gray-800">Engineer</p>
-                  <a href={`tel:${project.engineer_phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-0.5">
-                    <Phone size={10} />
-                    {project.engineer_phone}
-                  </a>
+                  <p className="text-sm font-semibold text-gray-800 truncate">{project.engineer_name ?? 'Site Engineer'}</p>
+                  {project.engineer_phone && (
+                    <a href={`tel:${project.engineer_phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-0.5">
+                      <Phone size={10} />
+                      {project.engineer_phone}
+                    </a>
+                  )}
                 </div>
               </div>
             )}
