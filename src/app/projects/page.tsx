@@ -6,20 +6,22 @@ import type { ProjectSummary } from '@/types'
 export const revalidate = 60
 
 async function getData() {
-  const [summaries, completedStages, targets] = await Promise.all([
+  const [summaries, completedStages, targets, managers] = await Promise.all([
     supabase.from('project_summary_view').select('*').order('mob_date', { ascending: false }),
     supabase.from('project_stages').select('project_id, stage_name').not('completed_date', 'is', null),
     supabase.from('stage_targets').select('stage_name, sort_order').order('sort_order'),
+    supabase.from('projects').select('id, project_manager'),
   ])
   return {
     projects: (summaries.data ?? []) as ProjectSummary[],
     completedStages: completedStages.data ?? [],
     targets: targets.data ?? [],
+    projectManagerMap: Object.fromEntries((managers.data ?? []).map(p => [p.id, p.project_manager as string | null])),
   }
 }
 
 export default async function ProjectsPage() {
-  const { projects, completedStages, targets } = await getData()
+  const { projects, completedStages, targets, projectManagerMap } = await getData()
 
   // Build map: project_id -> Set of completed stage names
   const completedMap = new Map<string, Set<string>>()
@@ -51,7 +53,7 @@ export default async function ProjectsPage() {
         </Link>
       </div>
 
-      <ProjectsTable projects={projects} currentStageMap={currentStageMap} />
+      <ProjectsTable projects={projects} currentStageMap={currentStageMap} projectManagerMap={projectManagerMap} />
     </div>
   )
 }
