@@ -5,6 +5,7 @@ import { StageEditor } from '@/components/ui/StageEditor'
 import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
 import { ProjectTargetsEditor } from '@/components/ui/ProjectTargetsEditor'
 import { ProjectHeader } from '@/components/ui/ProjectHeader'
+import { ProjectCoordinators } from '@/components/ui/ProjectCoordinators'
 import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
 import type { StageStatusRow, StageTarget, ProjectStageOverride } from '@/types'
 
@@ -72,6 +73,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { project, stages, targets, overrides, stageNotes, stagePayments } = await getData(id)
   if (!project) notFound()
 
+  // Coordinator assignment data — admin/staff only
+  let allCoordinators: { id: string; name: string }[] = []
+  let assignedCoordinators: { id: string; name: string }[] = []
+  if (role === 'admin' || role === 'staff') {
+    const client = sb()
+    const [coordsRes, assignedRes] = await Promise.all([
+      client.from('profiles').select('id, name').eq('role', 'coordinator').order('name'),
+      client.from('coordinator_projects').select('user_id').eq('project_id', id),
+    ])
+    allCoordinators = coordsRes.data ?? []
+    const assignedIds = new Set((assignedRes.data ?? []).map(r => r.user_id))
+    assignedCoordinators = allCoordinators.filter(c => assignedIds.has(c.id))
+  }
+
   const doneStages = stages.filter(s => s.completed_date)
   const onTime = doneStages.filter(s => s.stage_status === 'on_time').length
   const buffer = doneStages.filter(s => s.stage_status === 'buffer').length
@@ -91,6 +106,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         delayed={delayed}
         role={role}
       />
+
+      {/* Coordinator assignment — admin/staff only */}
+      {(role === 'admin' || role === 'staff') && (
+        <ProjectCoordinators
+          projectId={id}
+          allCoordinators={allCoordinators}
+          initialAssigned={assignedCoordinators}
+        />
+      )}
 
       {/* Gantt */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">
