@@ -30,7 +30,7 @@ export async function getCurrentUser() {
   return session?.user ?? null
 }
 
-export async function getUserRole(): Promise<'admin' | 'staff' | 'viewer'> {
+export async function getUserRole(): Promise<'admin' | 'staff' | 'coordinator' | 'viewer'> {
   const user = await getCurrentUser()
   if (!user) return 'staff'
   const sb = createClient(
@@ -38,5 +38,5 @@ export async function getUserRole(): Promise<'admin' | 'staff' | 'viewer'> {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
   const { data } = await sb.from('profiles').select('role').eq('id', user.id).single()
-  return (data?.role as 'admin' | 'staff') ?? 'staff'
+  return (data?.role as 'admin' | 'staff' | 'coordinator' | 'viewer') ?? 'staff'
 }

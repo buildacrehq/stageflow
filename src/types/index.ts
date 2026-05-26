@@ -20,6 +20,10 @@ export interface Project {
   floors: string | null
   status: ProjectStatus
   notes: string | null
+  client_phone: string | null
+  engineer_phone: string | null
+  project_manager: string | null
+  maps_link: string | null
   created_at: string
   updated_at: string
 }
@@ -30,6 +34,7 @@ export interface ProjectStage {
   stage_name: string
   completed_date: string | null
   notes: string | null
+  payment_date: string | null
   created_at: string
   updated_at: string
 }

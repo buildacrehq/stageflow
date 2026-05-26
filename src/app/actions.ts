@@ -13,18 +13,18 @@ function getAdminClient() {
 }
 
 export async function updateStageDate(
-  projectId: string, stageName: string, date: string | null, notes?: string | null
+  projectId: string, stageName: string, date: string | null, notes?: string | null, paymentDate?: string | null
 ) {
   const sb = getAdminClient()
 
   if (date) {
     await sb.from('project_stages').upsert(
-      { project_id: projectId, stage_name: stageName, completed_date: date, notes: notes ?? null },
+      { project_id: projectId, stage_name: stageName, completed_date: date, notes: notes ?? null, payment_date: paymentDate ?? null },
       { onConflict: 'project_id,stage_name' }
     )
   } else {
     await sb.from('project_stages')
-      .update({ completed_date: null, notes: notes ?? null })
+      .update({ completed_date: null, notes: notes ?? null, payment_date: paymentDate ?? null })
       .eq('project_id', projectId)
       .eq('stage_name', stageName)
   }
@@ -32,6 +32,7 @@ export async function updateStageDate(
   revalidatePath(`/projects/${projectId}`)
   revalidatePath('/projects')
   revalidatePath('/')
+  revalidatePath('/coordinator')
 }
 
 export async function updateStageTargetDuration(
@@ -48,7 +49,6 @@ export async function updateStageTargetDuration(
   const newCumulative = prevCumulative + duration
   const delta = newCumulative - all[idx].target_days
 
-  // Update this stage and cascade-shift all subsequent stages
   const updates = all.slice(idx).map(t => ({
     stage_name: t.stage_name,
     target_days: t.target_days + delta,
@@ -90,6 +90,7 @@ export async function signIn(formData: FormData): Promise<{ error?: string }> {
   cookieStore.set('sf_role', role, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 })
 
   if (role === 'viewer') redirect('/viewer')
+  if (role === 'coordinator') redirect('/coordinator')
   redirect('/')
 }
 
@@ -111,6 +112,10 @@ export async function createProject(data: {
   floors?: string | null
   status?: string
   notes?: string | null
+  client_phone?: string | null
+  engineer_phone?: string | null
+  project_manager?: string | null
+  maps_link?: string | null
 }) {
   const sb = getAdminClient()
   const { data: project, error } = await sb
@@ -153,7 +158,7 @@ export async function deleteProject(id: string) {
   redirect('/projects')
 }
 
-export async function updateUserRole(userId: string, role: 'admin' | 'staff' | 'viewer') {
+export async function updateUserRole(userId: string, role: 'admin' | 'staff' | 'coordinator' | 'viewer') {
   const sb = getAdminClient()
   await sb.from('profiles').update({ role }).eq('id', userId)
   revalidatePath('/settings')
@@ -182,7 +187,7 @@ export async function deleteUser(userId: string): Promise<{ error?: string }> {
 }
 
 export async function createUser(
-  email: string, password: string, role: 'admin' | 'staff' | 'viewer'
+  email: string, password: string, role: 'admin' | 'staff' | 'coordinator' | 'viewer'
 ): Promise<{ error?: string }> {
   const sb = getAdminClient()
   const { data, error } = await sb.auth.admin.createUser({
@@ -198,23 +203,33 @@ export async function createUser(
 
 export async function assignClientProject(userId: string, projectId: string): Promise<{ error?: string }> {
   const sb = getAdminClient()
-
   const { error: delError } = await sb.from('client_projects').delete().eq('user_id', userId)
   if (delError) return { error: `Delete failed: ${delError.message}` }
-
   const { data: inserted, error: insError } = await sb
     .from('client_projects')
     .insert({ user_id: userId, project_id: projectId })
     .select()
   if (insError) return { error: `Insert failed: ${insError.message}` }
   if (!inserted || inserted.length === 0) return { error: 'Nothing saved — check DB constraints or RLS' }
-
   return {}
 }
 
 export async function removeClientProject(userId: string) {
   const sb = getAdminClient()
   await sb.from('client_projects').delete().eq('user_id', userId)
+}
+
+export async function assignCoordinatorProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  const sb = getAdminClient()
+  const { error } = await sb.from('coordinator_projects').insert({ user_id: userId, project_id: projectId })
+  if (error) return { error: error.message }
+  return {}
+}
+
+export async function removeCoordinatorProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  const sb = getAdminClient()
+  await sb.from('coordinator_projects').delete().eq('user_id', userId).eq('project_id', projectId)
+  return {}
 }
 
 export async function updateProject(id: string, data: {
@@ -224,10 +239,15 @@ export async function updateProject(id: string, data: {
   floors: string | null
   status: string
   notes: string | null
+  client_phone: string | null
+  engineer_phone: string | null
+  project_manager: string | null
+  maps_link: string | null
 }) {
   const sb = getAdminClient()
   await sb.from('projects').update(data).eq('id', id)
   revalidatePath(`/projects/${id}`)
   revalidatePath('/projects')
   revalidatePath('/')
+  revalidatePath('/coordinator')
 }

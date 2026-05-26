@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Navbar } from '@/components/ui/Navbar'
 import { ClientNavbar } from '@/components/ui/ClientNavbar'
+import { CoordinatorNavbar } from '@/components/ui/CoordinatorNavbar'
 import { createAuthClient, getUserRole } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -37,7 +38,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {user && role === 'viewer' && (
           <ClientNavbar userEmail={user.email ?? ''} projectName={clientProjectName} />
         )}
-        {user && role !== 'viewer' && (
+        {user && role === 'coordinator' && (
+          <CoordinatorNavbar userEmail={user.email ?? ''} />
+        )}
+        {user && role !== 'viewer' && role !== 'coordinator' && (
           <Navbar userEmail={user.email ?? ''} role={role ?? 'staff'} />
         )}
         <main className={user ? 'md:ml-56 pt-14 md:pt-0 min-h-screen' : 'min-h-screen'}>

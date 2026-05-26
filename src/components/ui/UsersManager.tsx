@@ -1,12 +1,13 @@
 'use client'
 import { useTransition, useState } from 'react'
-import { updateUserRole, assignClientProject, removeClientProject, updateUserDetails, deleteUser } from '@/app/actions'
+import { updateUserRole, assignClientProject, removeClientProject, assignCoordinatorProject, removeCoordinatorProject, updateUserDetails, deleteUser } from '@/app/actions'
 
 interface UserProfile {
   id: string
   email: string
-  role: 'admin' | 'staff' | 'viewer'
+  role: 'admin' | 'staff' | 'coordinator' | 'viewer'
   projectId?: string | null
+  coordinatorProjectIds?: string[]
 }
 
 interface Project {
@@ -30,6 +31,9 @@ export function UsersManager({
   const [projectIds, setProjectIds] = useState<Record<string, string>>(
     Object.fromEntries(users.map(u => [u.id, u.projectId ?? '']))
   )
+  const [coordProjectIds, setCoordProjectIds] = useState<Record<string, string[]>>(
+    Object.fromEntries(users.map(u => [u.id, u.coordinatorProjectIds ?? []]))
+  )
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editPassword, setEditPassword] = useState('')
@@ -50,7 +54,7 @@ export function UsersManager({
     setConfirmDelete(null)
   }
 
-  function handleRoleChange(userId: string, newRole: 'admin' | 'staff' | 'viewer') {
+  function handleRoleChange(userId: string, newRole: 'admin' | 'staff' | 'coordinator' | 'viewer') {
     setRoles(r => ({ ...r, [userId]: newRole }))
     startTransition(async () => {
       await updateUserRole(userId, newRole)
@@ -71,6 +75,26 @@ export function UsersManager({
       }
       setSaved(userId + '_proj')
       setTimeout(() => setSaved(null), 2000)
+    })
+  }
+
+  function handleAddCoordProject(userId: string, projectId: string) {
+    if (!projectId) return
+    if ((coordProjectIds[userId] ?? []).includes(projectId)) return
+    setCoordProjectIds(p => ({ ...p, [userId]: [...(p[userId] ?? []), projectId] }))
+    setProjError(null)
+    startTransition(async () => {
+      const res = await assignCoordinatorProject(userId, projectId)
+      if (res.error) { setProjError(res.error); return }
+      setSaved(userId + '_cproj')
+      setTimeout(() => setSaved(null), 2000)
+    })
+  }
+
+  function handleRemoveCoordProject(userId: string, projectId: string) {
+    setCoordProjectIds(p => ({ ...p, [userId]: (p[userId] ?? []).filter(id => id !== projectId) }))
+    startTransition(async () => {
+      await removeCoordinatorProject(userId, projectId)
     })
   }
 
@@ -100,6 +124,7 @@ export function UsersManager({
   const roleColors: Record<string, string> = {
     admin: 'bg-green-100 text-green-700',
     staff: 'bg-gray-100 text-gray-500',
+    coordinator: 'bg-amber-100 text-amber-700',
     viewer: 'bg-blue-100 text-blue-700',
   }
 
@@ -110,6 +135,9 @@ export function UsersManager({
         const isEditing = editingId === u.id
         const currentRole = roles[u.id] ?? u.role
         const currentProjectId = projectIds[u.id] ?? ''
+        const currentCoordProjects = coordProjectIds[u.id] ?? []
+        const availableForCoord = projects.filter(p => !currentCoordProjects.includes(p.id))
+
         return (
           <div key={u.id} className="px-5 py-3.5">
             {/* Name + role row */}
@@ -119,9 +147,7 @@ export function UsersManager({
                 {isCurrentUser && <p className="text-xs text-gray-400 mt-0.5">You</p>}
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                {saved === u.id + '_edit' && (
-                  <span className="text-xs text-green-600 font-medium">Saved ✓</span>
-                )}
+                {saved === u.id + '_edit' && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${roleColors[currentRole]}`}>
                   {currentRole.charAt(0).toUpperCase() + currentRole.slice(1)}
                 </span>
@@ -133,11 +159,12 @@ export function UsersManager({
                   <select
                     value={currentRole}
                     disabled={isPending}
-                    onChange={e => handleRoleChange(u.id, e.target.value as 'admin' | 'staff' | 'viewer')}
+                    onChange={e => handleRoleChange(u.id, e.target.value as 'admin' | 'staff' | 'coordinator' | 'viewer')}
                     className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:opacity-50"
                   >
                     <option value="admin">Admin</option>
                     <option value="staff">Staff</option>
+                    <option value="coordinator">Coordinator</option>
                     <option value="viewer">Viewer</option>
                   </select>
                 )}
@@ -152,7 +179,7 @@ export function UsersManager({
               </div>
             </div>
 
-            {/* Project assignment for viewer role */}
+            {/* Viewer — single project assignment */}
             {currentRole === 'viewer' && !isEditing && (
               <div className="mt-2 space-y-1">
                 <div className="flex items-center gap-2">
@@ -173,9 +200,50 @@ export function UsersManager({
                     </select>
                   )}
                 </div>
-                {projError && (
-                  <p className="text-xs text-red-600">{projError}</p>
+                {projError && <p className="text-xs text-red-600">{projError}</p>}
+              </div>
+            )}
+
+            {/* Coordinator — multi-project assignment */}
+            {currentRole === 'coordinator' && !isEditing && (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {currentCoordProjects.length === 0 && (
+                    <span className="text-xs text-gray-400 italic">No projects assigned</span>
+                  )}
+                  {currentCoordProjects.map(pid => {
+                    const proj = projects.find(p => p.id === pid)
+                    return proj ? (
+                      <span key={pid} className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-2 py-0.5">
+                        {proj.client_name}
+                        <button
+                          onClick={() => handleRemoveCoordProject(u.id, pid)}
+                          disabled={isPending}
+                          className="ml-0.5 text-amber-400 hover:text-red-600 font-medium"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ) : null
+                  })}
+                  {saved === u.id + '_cproj' && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
+                </div>
+                {availableForCoord.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      defaultValue=""
+                      disabled={isPending}
+                      onChange={e => { handleAddCoordProject(u.id, e.target.value); e.target.value = '' }}
+                      className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:opacity-50 max-w-xs"
+                    >
+                      <option value="">+ Add project…</option>
+                      {availableForCoord.map(p => (
+                        <option key={p.id} value={p.id}>{p.client_name}</option>
+                      ))}
+                    </select>
+                  </div>
                 )}
+                {projError && <p className="text-xs text-red-600">{projError}</p>}
               </div>
             )}
 
@@ -216,10 +284,7 @@ export function UsersManager({
                     >
                       {isPending ? 'Saving…' : 'Save'}
                     </button>
-                    <button
-                      onClick={cancelEdit}
-                      className="text-xs text-gray-400 hover:text-gray-600"
-                    >
+                    <button onClick={cancelEdit} className="text-xs text-gray-400 hover:text-gray-600">
                       Cancel
                     </button>
                   </div>
@@ -233,10 +298,7 @@ export function UsersManager({
                       >
                         Yes, delete
                       </button>
-                      <button
-                        onClick={() => setConfirmDelete(null)}
-                        className="text-xs text-gray-400 hover:text-gray-600"
-                      >
+                      <button onClick={() => setConfirmDelete(null)} className="text-xs text-gray-400 hover:text-gray-600">
                         No
                       </button>
                     </div>

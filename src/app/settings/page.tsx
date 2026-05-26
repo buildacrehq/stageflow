@@ -20,10 +20,11 @@ export default async function SettingsPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  const [targetsRes, usersRes, clientProjectsRes, projectsRes] = await Promise.all([
+  const [targetsRes, usersRes, clientProjectsRes, coordinatorProjectsRes, projectsRes] = await Promise.all([
     supabase.from('stage_targets').select('*').order('sort_order'),
     sb.from('profiles').select('id, name, role').order('created_at'),
     sb.from('client_projects').select('user_id, project_id'),
+    sb.from('coordinator_projects').select('user_id, project_id'),
     supabase.from('projects').select('id, client_name').order('client_name'),
   ])
 
@@ -34,11 +35,18 @@ export default async function SettingsPage() {
     (clientProjectsRes.data ?? []).map(r => [r.user_id, r.project_id])
   )
 
+  const coordinatorProjectMap: Record<string, string[]> = {}
+  for (const r of coordinatorProjectsRes.data ?? []) {
+    if (!coordinatorProjectMap[r.user_id]) coordinatorProjectMap[r.user_id] = []
+    coordinatorProjectMap[r.user_id].push(r.project_id)
+  }
+
   const users = (usersRes.data ?? []).map(u => ({
     id: u.id,
     email: u.name as string,
-    role: u.role as 'admin' | 'staff' | 'viewer',
+    role: u.role as 'admin' | 'staff' | 'coordinator' | 'viewer',
     projectId: clientProjectMap[u.id] ?? null,
+    coordinatorProjectIds: coordinatorProjectMap[u.id] ?? [],
   }))
 
   return (
@@ -63,7 +71,7 @@ export default async function SettingsPage() {
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
           <p className="text-sm font-medium text-gray-700">Users</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            Admin · Staff · Viewer — set roles and assign projects to viewers. Staff cannot access Settings.
+            Admin · Staff · Coordinator · Viewer — set roles and assign projects. Staff cannot access Settings.
           </p>
         </div>
         {users.length === 0 ? (

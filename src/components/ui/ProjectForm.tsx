@@ -8,6 +8,7 @@ export function ProjectForm({ project }: { project?: Project }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [showMap, setShowMap] = useState(!!project?.maps_link)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -20,6 +21,10 @@ export function ProjectForm({ project }: { project?: Project }) {
       floors: (fd.get('floors') as string) || null,
       status: fd.get('status') as string,
       notes: (fd.get('notes') as string) || null,
+      client_phone: (fd.get('client_phone') as string) || null,
+      engineer_phone: (fd.get('engineer_phone') as string) || null,
+      project_manager: (fd.get('project_manager') as string) || null,
+      maps_link: showMap ? ((fd.get('maps_link') as string) || null) : null,
     }
 
     startTransition(async () => {
@@ -45,43 +50,80 @@ export function ProjectForm({ project }: { project?: Project }) {
         <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Client name *</label>
-          <input name="client_name" required defaultValue={project?.client_name} placeholder="e.g. Rajesh Kumar" className={inputCls} />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Location</label>
-          <input name="location" defaultValue={project?.location ?? ''} placeholder="e.g. Whitefield, Bangalore" className={inputCls} />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Mobilisation date</label>
-          <input name="mob_date" type="date" defaultValue={project?.mob_date ?? ''} className={inputCls} />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Status</label>
-          <select name="status" defaultValue={project?.status ?? 'active'} className={inputCls + ' bg-white'}>
-            <option value="active">Active</option>
-            <option value="completed">Completed</option>
-            <option value="on_hold">On Hold</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Number of floors</label>
-          <select name="floors" defaultValue={project?.floors ?? ''} className={inputCls + ' bg-white'}>
-            <option value="">Not set (show all stages)</option>
-            <option value="G">G — Ground floor only</option>
-            <option value="G+1">G+1 — 1 upper floor</option>
-            <option value="G+2">G+2 — 2 upper floors</option>
-            <option value="G+3">G+3 — 3 upper floors</option>
-            <option value="G+4">G+4 — 4 upper floors</option>
-          </select>
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Project info</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Client name *</label>
+            <input name="client_name" required defaultValue={project?.client_name} placeholder="e.g. Rajesh Kumar" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Client phone</label>
+            <input name="client_phone" type="tel" defaultValue={project?.client_phone ?? ''} placeholder="e.g. 9876543210" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Location</label>
+            <input name="location" defaultValue={project?.location ?? ''} placeholder="e.g. Whitefield, Bangalore" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Project manager</label>
+            <input name="project_manager" defaultValue={project?.project_manager ?? ''} placeholder="e.g. Suresh Kumar" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Engineer phone</label>
+            <input name="engineer_phone" type="tel" defaultValue={project?.engineer_phone ?? ''} placeholder="e.g. 9876543210" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Mobilisation date</label>
+            <input name="mob_date" type="date" defaultValue={project?.mob_date ?? ''} className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Status</label>
+            <select name="status" defaultValue={project?.status ?? 'active'} className={inputCls + ' bg-white'}>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="on_hold">On Hold</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Number of floors</label>
+            <select name="floors" defaultValue={project?.floors ?? ''} className={inputCls + ' bg-white'}>
+              <option value="">Not set (show all stages)</option>
+              <option value="G">G — Ground floor only</option>
+              <option value="G+1">G+1 — 1 upper floor</option>
+              <option value="G+2">G+2 — 2 upper floors</option>
+              <option value="G+3">G+3 — 3 upper floors</option>
+              <option value="G+4">G+4 — 4 upper floors</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1.5">Notes</label>
         <textarea name="notes" defaultValue={project?.notes ?? ''} rows={3} placeholder="Any additional notes..." className={inputCls + ' resize-none'} />
+      </div>
+
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setShowMap(v => !v)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${showMap ? 'bg-green-600' : 'bg-gray-200'}`}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showMap ? 'translate-x-4' : 'translate-x-1'}`} />
+          </button>
+          <label className="text-xs font-medium text-gray-600">Google Maps link</label>
+        </div>
+        {showMap && (
+          <input
+            name="maps_link"
+            type="url"
+            defaultValue={project?.maps_link ?? ''}
+            placeholder="https://maps.google.com/..."
+            className={inputCls}
+          />
+        )}
       </div>
 
       <div className="flex items-center gap-3 pt-1">

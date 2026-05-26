@@ -23,12 +23,16 @@ interface Props {
   mobDate: string | null
   floors: string | null
   stageNotes: Record<string, string | null>
+  stagePayments: Record<string, string | null>
 }
 
-export function StageEditor({ projectId, stages, targets, mobDate, floors, stageNotes }: Props) {
+export function StageEditor({ projectId, stages, targets, mobDate, floors, stageNotes, stagePayments }: Props) {
   const [editing, setEditing] = useState<string | null>(null)
   const [noteValues, setNoteValues] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(stageNotes).map(([k, v]) => [k, v ?? '']))
+  )
+  const [paymentValues, setPaymentValues] = useState<Record<string, string>>(
+    Object.fromEntries(Object.entries(stagePayments).map(([k, v]) => [k, v ?? '']))
   )
   const [isPending, startTransition] = useTransition()
 
@@ -39,8 +43,12 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
   )
 
   function handleSave(stageName: string, date: string) {
+    const note = noteValues[stageName] === 'Other'
+      ? (document.getElementById(`note-other-${stageName}`) as HTMLInputElement)?.value || 'Other'
+      : noteValues[stageName] || null
+    const payment = paymentValues[stageName] || null
     startTransition(async () => {
-      await updateStageDate(projectId, stageName, date || null, noteValues[stageName] || null)
+      await updateStageDate(projectId, stageName, date || null, note, payment)
       setEditing(null)
     })
   }
@@ -53,6 +61,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Stage</th>
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Category</th>
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Completed Date</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Payment Date</th>
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Days from Mob</th>
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Target</th>
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Delay</th>
@@ -64,8 +73,8 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             const s = stageMap[t.stage_name]
             const isEditing = editing === t.stage_name
             const currentDate = s?.completed_date ?? ''
-            const isDelayed = s?.stage_status === 'delayed'
             const savedNote = stageNotes[t.stage_name]
+            const savedPayment = stagePayments[t.stage_name]
 
             return (
               <>
@@ -134,6 +143,22 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                       </button>
                     )}
                   </td>
+                  <td className="px-4 py-2.5">
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={paymentValues[t.stage_name] ?? ''}
+                        onChange={e => setPaymentValues(prev => ({ ...prev, [t.stage_name]: e.target.value }))}
+                        className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
+                      />
+                    ) : (
+                      <span className="text-gray-600 text-xs">
+                        {savedPayment
+                          ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : <span className="text-gray-300">—</span>}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-2.5 text-center text-gray-600">
                     {s?.days_from_mob != null ? `${s.days_from_mob}d` : '—'}
                   </td>
@@ -151,7 +176,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                 </tr>
                 {savedNote && !isEditing && (
                   <tr key={`note-${t.stage_name}`} className="border-b border-gray-50 bg-amber-50/40">
-                    <td colSpan={7} className="px-4 py-1.5">
+                    <td colSpan={8} className="px-4 py-1.5">
                       <span className="text-xs text-amber-700">⚠ Delay reason: {savedNote}</span>
                     </td>
                   </tr>

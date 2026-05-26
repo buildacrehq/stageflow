@@ -31,10 +31,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Viewers can only access /viewer
   const role = request.cookies.get('sf_role')?.value
+
+  // Viewers can only access /viewer
   if (role === 'viewer' && pathname !== '/viewer') {
     return NextResponse.redirect(new URL('/viewer', request.url))
+  }
+
+  // Coordinators can only access /coordinator and /projects/*
+  if (role === 'coordinator') {
+    const allowed = pathname.startsWith('/coordinator') || pathname.startsWith('/projects')
+    if (!allowed) return NextResponse.redirect(new URL('/coordinator', request.url))
   }
 
   return response
