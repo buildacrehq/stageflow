@@ -34,6 +34,10 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
   const [paymentValues, setPaymentValues] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(stagePayments).map(([k, v]) => [k, v ?? '']))
   )
+  const [dateValues, setDateValues] = useState<Record<string, string>>(
+    Object.fromEntries(stages.map(s => [s.stage_name, s.completed_date ?? '']))
+  )
+  const [noteError, setNoteError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -50,11 +54,35 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
     t.category === 'finishing' || allowedStructure.has(t.stage_name)
   )
 
-  function handleSave(stageName: string, date: string) {
-    const note = noteValues[stageName] === 'Other'
-      ? (document.getElementById(`note-other-${stageName}`) as HTMLInputElement)?.value || 'Other'
-      : noteValues[stageName] || null
-    const payment = paymentValues[stageName] || null
+  // Compute whether a date will result in delayed status for a given stage
+  function willBeDelayed(stageName: string, date: string): boolean {
+    if (!mobDate || !date) return false
+    const s = stageMap[stageName]
+    if (!s) return false
+    const days = Math.round((new Date(date).getTime() - new Date(mobDate).getTime()) / 86400000)
+    return days > s.target_days + s.buffer_days
+  }
+
+  function openEdit(stageName: string) {
+    setNoteError(null)
+    setDateValues(prev => ({ ...prev, [stageName]: stageMap[stageName]?.completed_date ?? '' }))
+    setEditing(stageName)
+  }
+
+  function handleSave(stageName: string) {
+    const date = dateValues[stageName] ?? ''
+    const rawNote = noteValues[stageName]
+    const note = rawNote === 'Other'
+      ? (document.getElementById(`note-other-${stageName}`) as HTMLInputElement)?.value?.trim() || 'Other'
+      : rawNote || null
+
+    if (date && willBeDelayed(stageName, date) && !note) {
+      setNoteError('Delay reason is required when stage is delayed.')
+      return
+    }
+
+    setNoteError(null)
+    const payment = paymentValues[stageName]?.trim() || null
     startTransition(async () => {
       await updateStageDate(projectId, stageName, date || null, note, payment)
       setEditing(null)
@@ -84,11 +112,17 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             const savedNote = stageNotes[t.stage_name]
             const savedPayment = stagePayments[t.stage_name]
 
+            const editingDate = dateValues[t.stage_name] ?? ''
+            const delayed = isEditing && editingDate ? willBeDelayed(t.stage_name, editingDate) : false
+            const noteRequired = delayed
+            const noteValue = noteValues[t.stage_name] ?? ''
+            const canSave = !noteRequired || !!noteValue
+
             return (
               <>
                 <tr
                   key={t.stage_name}
-                  className={`border-b ${isEditing || savedNote ? 'border-gray-100' : 'border-gray-50'} transition-colors ${isEditing ? 'bg-green-50' : 'hover:bg-gray-50'}`}
+                  className={`border-b ${isEditing || savedNote ? 'border-gray-100' : 'border-gray-50'} transition-colors ${isEditing ? 'bg-red-50/30' : 'hover:bg-gray-50'}`}
                 >
                   <td className="px-4 py-2.5 font-medium text-gray-800">{t.stage_name}</td>
                   <td className="px-4 py-2.5">
@@ -99,37 +133,56 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                   <td className="px-4 py-2.5">
                     {isEditing ? (
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <input
                             type="date"
-                            defaultValue={currentDate}
-                            id={`date-${t.stage_name}`}
+                            value={editingDate}
+                            onChange={e => {
+                              setDateValues(prev => ({ ...prev, [t.stage_name]: e.target.value }))
+                              setNoteError(null)
+                            }}
                             className="border border-green-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
                           />
                           <button
-                            disabled={isPending}
-                            onClick={() => {
-                              const val = (document.getElementById(`date-${t.stage_name}`) as HTMLInputElement).value
-                              handleSave(t.stage_name, val)
-                            }}
-                            className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50"
+                            disabled={isPending || !canSave}
+                            onClick={() => handleSave(t.stage_name)}
+                            className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Save
                           </button>
-                          <button onClick={() => setEditing(null)} className="px-2 py-1 text-gray-500 text-xs hover:text-gray-700">
+                          <button onClick={() => { setEditing(null); setNoteError(null) }} className="px-2 py-1 text-gray-500 text-xs hover:text-gray-700">
                             Cancel
                           </button>
+                          {delayed && (
+                            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Delayed</span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={noteValues[t.stage_name] ?? ''}
-                            onChange={e => setNoteValues(prev => ({ ...prev, [t.stage_name]: e.target.value }))}
-                            className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600 bg-white text-gray-600"
-                          >
-                            <option value="">Reason for delay (optional)</option>
-                            {DELAY_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                          </select>
-                          {noteValues[t.stage_name] === 'Other' && (
+
+                        {/* Delay reason */}
+                        <div className="flex items-start gap-2 flex-wrap">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1">
+                              <select
+                                value={noteValue}
+                                onChange={e => { setNoteValues(prev => ({ ...prev, [t.stage_name]: e.target.value })); setNoteError(null) }}
+                                className={`border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 bg-white ${
+                                  noteRequired && !noteValue
+                                    ? 'border-red-400 focus:ring-red-500 text-red-600'
+                                    : 'border-gray-200 focus:ring-green-600 text-gray-600'
+                                }`}
+                              >
+                                <option value="">
+                                  {noteRequired ? 'Select delay reason (required)' : 'Reason for delay (optional)'}
+                                </option>
+                                {DELAY_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                              </select>
+                              {noteRequired && <span className="text-red-500 text-xs font-medium">*</span>}
+                            </div>
+                            {noteError && (
+                              <p className="text-xs text-red-600">{noteError}</p>
+                            )}
+                          </div>
+                          {noteValue === 'Other' && (
                             <input
                               type="text"
                               placeholder="Describe reason…"
@@ -141,7 +194,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                       </div>
                     ) : (
                       <button
-                        onClick={() => setEditing(t.stage_name)}
+                        onClick={() => openEdit(t.stage_name)}
                         className="text-left text-gray-700 hover:text-green-700 transition-colors"
                       >
                         {currentDate
