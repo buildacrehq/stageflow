@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { StatusBadge } from './StatusBadge'
 import { updateStageDate } from '@/app/actions'
 import { visibleStructureStages } from '@/lib/constants'
@@ -35,6 +35,14 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
     Object.fromEntries(Object.entries(stagePayments).map(([k, v]) => [k, v ?? '']))
   )
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    setNoteValues(Object.fromEntries(Object.entries(stageNotes).map(([k, v]) => [k, v ?? ''])))
+  }, [stageNotes])
+
+  useEffect(() => {
+    setPaymentValues(Object.fromEntries(Object.entries(stagePayments).map(([k, v]) => [k, v ?? ''])))
+  }, [stagePayments])
 
   const stageMap = Object.fromEntries(stages.map(s => [s.stage_name, s]))
   const allowedStructure = new Set(visibleStructureStages(floors))

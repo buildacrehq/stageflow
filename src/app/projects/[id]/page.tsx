@@ -46,7 +46,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const user = await getCurrentUser()
   const role = await getUserRole()
 
-  // Coordinators: verify they have access to this project
+  // Viewers: only allow access to their assigned project
+  if (role === 'viewer' && user) {
+    const client = sb()
+    const { data } = await client
+      .from('client_projects')
+      .select('project_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!data || data.project_id !== id) notFound()
+  }
+
+  // Coordinators: verify they are assigned to this project
   if (role === 'coordinator' && user) {
     const client = sb()
     const { data } = await client
@@ -54,7 +65,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       .select('project_id')
       .eq('user_id', user.id)
       .eq('project_id', id)
-      .single()
+      .maybeSingle()
     if (!data) redirect('/coordinator')
   }
 

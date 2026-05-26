@@ -6,7 +6,7 @@ import { ProjectProgressPanel } from '@/components/ui/ProjectProgressPanel'
 import { visibleStructureStages, FINISHING_STAGES } from '@/lib/constants'
 import type { ProjectSummary, StageAnalysis } from '@/types'
 
-export const revalidate = 60
+export const revalidate = 0
 
 async function getData() {
   const [summaries, stageAnalysis, completedStages, targets, projectFloors] = await Promise.all([

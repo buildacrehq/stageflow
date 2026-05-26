@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { createAuthClient } from '@/lib/supabase-server'
+import { createAuthClient, getUserRole } from '@/lib/supabase-server'
 
 function getAdminClient() {
   return createClient(
@@ -12,29 +12,27 @@ function getAdminClient() {
   )
 }
 
+async function requireRole(...allowed: string[]) {
+  const role = await getUserRole()
+  if (!allowed.includes(role)) throw new Error('Unauthorized')
+}
+
 export async function updateStageDate(
   projectId: string, stageName: string, date: string | null, notes?: string | null, paymentDate?: string | null
 ) {
+  await requireRole('admin', 'staff', 'coordinator')
   const sb = getAdminClient()
-
-  if (date) {
-    await sb.from('project_stages').upsert(
-      { project_id: projectId, stage_name: stageName, completed_date: date, notes: notes ?? null, payment_date: paymentDate ?? null },
-      { onConflict: 'project_id,stage_name' }
-    )
-  } else {
-    await sb.from('project_stages')
-      .update({ completed_date: null, notes: notes ?? null, payment_date: paymentDate ?? null })
-      .eq('project_id', projectId)
-      .eq('stage_name', stageName)
-  }
-
+  await sb.from('project_stages').upsert(
+    { project_id: projectId, stage_name: stageName, completed_date: date ?? null, notes: notes ?? null, payment_date: paymentDate ?? null },
+    { onConflict: 'project_id,stage_name' }
+  )
   revalidatePath(`/projects/${projectId}`)
 }
 
 export async function updateStageTargetDuration(
   stageName: string, duration: number, bufferDays: number
 ) {
+  await requireRole('admin')
   const sb = getAdminClient()
   const { data: all } = await sb.from('stage_targets').select('*').order('sort_order')
   if (!all) return
@@ -113,6 +111,7 @@ export async function createProject(data: {
   project_manager?: string | null
   maps_link?: string | null
 }) {
+  await requireRole('admin', 'staff')
   const sb = getAdminClient()
   const { data: project, error } = await sb
     .from('projects')
@@ -128,6 +127,7 @@ export async function createProject(data: {
 export async function upsertProjectStageOverride(
   projectId: string, stageName: string, targetDays: number, bufferDays: number
 ) {
+  await requireRole('admin', 'staff')
   const sb = getAdminClient()
   await sb.from('project_stage_overrides').upsert(
     { project_id: projectId, stage_name: stageName, target_days: targetDays, buffer_days: bufferDays },
@@ -137,6 +137,7 @@ export async function upsertProjectStageOverride(
 }
 
 export async function deleteProjectStageOverride(projectId: string, stageName: string) {
+  await requireRole('admin', 'staff')
   const sb = getAdminClient()
   await sb.from('project_stage_overrides')
     .delete()
@@ -146,6 +147,7 @@ export async function deleteProjectStageOverride(projectId: string, stageName: s
 }
 
 export async function deleteProject(id: string) {
+  await requireRole('admin')
   const sb = getAdminClient()
   await sb.from('projects').delete().eq('id', id)
   revalidatePath('/projects')
@@ -153,6 +155,7 @@ export async function deleteProject(id: string) {
 }
 
 export async function updateUserRole(userId: string, role: 'admin' | 'staff' | 'coordinator' | 'viewer') {
+  await requireRole('admin')
   const sb = getAdminClient()
   await sb.from('profiles').update({ role }).eq('id', userId)
   revalidatePath('/settings')
@@ -161,6 +164,7 @@ export async function updateUserRole(userId: string, role: 'admin' | 'staff' | '
 export async function updateUserDetails(
   userId: string, name: string, password: string
 ): Promise<{ error?: string }> {
+  await requireRole('admin')
   const sb = getAdminClient()
   await sb.from('profiles').update({ name }).eq('id', userId)
   if (password) {
@@ -172,6 +176,7 @@ export async function updateUserDetails(
 }
 
 export async function deleteUser(userId: string): Promise<{ error?: string }> {
+  await requireRole('admin')
   const sb = getAdminClient()
   await sb.from('profiles').delete().eq('id', userId)
   const { error } = await sb.auth.admin.deleteUser(userId)
@@ -183,6 +188,7 @@ export async function deleteUser(userId: string): Promise<{ error?: string }> {
 export async function createUser(
   email: string, password: string, role: 'admin' | 'staff' | 'coordinator' | 'viewer'
 ): Promise<{ error?: string }> {
+  await requireRole('admin')
   const sb = getAdminClient()
   const { data, error } = await sb.auth.admin.createUser({
     email,
@@ -196,6 +202,7 @@ export async function createUser(
 }
 
 export async function assignClientProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  await requireRole('admin')
   const sb = getAdminClient()
   const { error: delError } = await sb.from('client_projects').delete().eq('user_id', userId)
   if (delError) return { error: `Delete failed: ${delError.message}` }
@@ -209,11 +216,13 @@ export async function assignClientProject(userId: string, projectId: string): Pr
 }
 
 export async function removeClientProject(userId: string) {
+  await requireRole('admin')
   const sb = getAdminClient()
   await sb.from('client_projects').delete().eq('user_id', userId)
 }
 
 export async function assignCoordinatorProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  await requireRole('admin')
   const sb = getAdminClient()
   const { error } = await sb.from('coordinator_projects').insert({ user_id: userId, project_id: projectId })
   if (error) return { error: error.message }
@@ -221,6 +230,7 @@ export async function assignCoordinatorProject(userId: string, projectId: string
 }
 
 export async function removeCoordinatorProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  await requireRole('admin')
   const sb = getAdminClient()
   await sb.from('coordinator_projects').delete().eq('user_id', userId).eq('project_id', projectId)
   return {}
@@ -239,6 +249,7 @@ export async function updateProject(id: string, data: {
   project_manager: string | null
   maps_link: string | null
 }) {
+  await requireRole('admin', 'staff', 'coordinator')
   const sb = getAdminClient()
   await sb.from('projects').update(data).eq('id', id)
   revalidatePath(`/projects/${id}`)
