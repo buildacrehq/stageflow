@@ -1,15 +1,33 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { ProjectForm } from '@/components/ui/ProjectForm'
+import { ProjectTargetsEditor } from '@/components/ui/ProjectTargetsEditor'
+import { getUserRole } from '@/lib/supabase-server'
 import Link from 'next/link'
-import type { Project } from '@/types'
+import type { Project, StageTarget, ProjectStageOverride } from '@/types'
 
 export const revalidate = 0
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { data: project } = await supabase.from('projects').select('*').eq('id', id).single()
-  if (!project) notFound()
+  const role = await getUserRole()
+
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const [projectRes, targetsRes, overridesRes] = await Promise.all([
+    sb.from('projects').select('*').eq('id', id).single(),
+    sb.from('stage_targets').select('*').order('sort_order'),
+    sb.from('project_stage_overrides').select('*').eq('project_id', id),
+  ])
+
+  if (!projectRes.data) notFound()
+
+  const project = projectRes.data as Project
+  const targets = (targetsRes.data ?? []) as StageTarget[]
+  const overrides = (overridesRes.data ?? []) as ProjectStageOverride[]
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -21,11 +39,30 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
+      {/* Project details form */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <ProjectForm project={project as Project} />
+        <ProjectForm project={project} />
       </div>
 
-
+      {/* Stage timeline overrides — admin/staff only */}
+      {(role === 'admin' || role === 'staff') && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="text-sm font-medium text-gray-700">Custom stage timeline</p>
+              {overrides.length > 0 && (
+                <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 font-medium rounded-full">
+                  {overrides.length} override{overrides.length > 1 ? 's' : ''} active
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400">
+              Adjust target days for individual stages on this project only. Global defaults (in Settings) are not affected.
+            </p>
+          </div>
+          <ProjectTargetsEditor projectId={id} defaults={targets} overrides={overrides} />
+        </div>
+      )}
     </div>
   )
 }

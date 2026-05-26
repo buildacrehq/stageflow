@@ -3,11 +3,10 @@ import { notFound, redirect } from 'next/navigation'
 import { ProjectGantt } from '@/components/charts/ProjectGantt'
 import { StageEditor } from '@/components/ui/StageEditor'
 import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
-import { ProjectTargetsEditor } from '@/components/ui/ProjectTargetsEditor'
 import { ProjectHeader } from '@/components/ui/ProjectHeader'
 import { ProjectCoordinators } from '@/components/ui/ProjectCoordinators'
 import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
-import type { StageStatusRow, StageTarget, ProjectStageOverride } from '@/types'
+import type { StageStatusRow, StageTarget } from '@/types'
 
 export const revalidate = 0
 
@@ -20,18 +19,16 @@ function sb() {
 
 async function getData(id: string) {
   const client = sb()
-  const [projectRes, stagesRes, targetsRes, overridesRes, stageDataRes] = await Promise.all([
+  const [projectRes, stagesRes, targetsRes, stageDataRes] = await Promise.all([
     client.from('projects').select('*').eq('id', id).single(),
     client.from('stage_status_view').select('*').eq('project_id', id).order('sort_order'),
     client.from('stage_targets').select('*').order('sort_order'),
-    client.from('project_stage_overrides').select('*').eq('project_id', id),
     client.from('project_stages').select('stage_name, notes, payment_date').eq('project_id', id),
   ])
   return {
     project: projectRes.data,
     stages: (stagesRes.data ?? []) as StageStatusRow[],
     targets: (targetsRes.data ?? []) as StageTarget[],
-    overrides: (overridesRes.data ?? []) as ProjectStageOverride[],
     stageNotes: Object.fromEntries(
       (stageDataRes.data ?? []).map(r => [r.stage_name, r.notes as string | null])
     ) as Record<string, string | null>,
@@ -70,7 +67,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     if (!data) redirect('/coordinator')
   }
 
-  const { project, stages, targets, overrides, stageNotes, stagePayments } = await getData(id)
+  const { project, stages, targets, stageNotes, stagePayments } = await getData(id)
   if (!project) notFound()
 
   // Coordinator assignment data — admin/staff only
@@ -142,19 +139,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         />
       </div>
 
-      {/* Per-project stage targets — admin/staff only */}
-      {(role === 'admin' || role === 'staff') && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100">
-            <p className="text-sm font-medium text-gray-700">Stage target days — this project</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Override target days for this project only. Other projects are not affected.
-              {overrides.length > 0 && <span className="ml-2 text-blue-600 font-medium">{overrides.length} custom override{overrides.length > 1 ? 's' : ''} set</span>}
-            </p>
-          </div>
-          <ProjectTargetsEditor projectId={id} defaults={targets} overrides={overrides} />
-        </div>
-      )}
     </div>
   )
 }
