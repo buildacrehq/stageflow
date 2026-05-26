@@ -263,11 +263,15 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                         className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
                       />
                     ) : (
-                      <span className="text-gray-600 text-xs">
+                      <button
+                        onClick={() => openEdit(t.stage_name)}
+                        className="text-left text-gray-700 hover:text-green-700 transition-colors"
+                      >
                         {savedPayment
                           ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : <span className="text-gray-300">—</span>}
-                      </span>
+                          : <span className="text-gray-300 italic text-xs">Click to add date</span>
+                        }
+                      </button>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-center text-gray-600">
