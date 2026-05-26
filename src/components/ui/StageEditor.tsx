@@ -43,7 +43,6 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
   useEffect(() => {
     setNoteValues(Object.fromEntries(Object.entries(stageNotes).map(([k, v]) => [k, v ?? ''])))
   }, [stageNotes])
-
   useEffect(() => {
     setPaymentValues(Object.fromEntries(Object.entries(stagePayments).map(([k, v]) => [k, v ?? ''])))
   }, [stagePayments])
@@ -54,7 +53,6 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
     t.category === 'finishing' || allowedStructure.has(t.stage_name)
   )
 
-  // Compute whether a date will result in delayed status for a given stage
   function willBeDelayed(stageName: string, date: string): boolean {
     if (!mobDate || !date) return false
     const s = stageMap[stageName]
@@ -69,7 +67,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
     setEditing(stageName)
   }
 
-  function handleSave(stageName: string) {
+  function handleStructureSave(stageName: string) {
     const date = dateValues[stageName] ?? ''
     const rawNote = noteValues[stageName]
     const note = rawNote === 'Other'
@@ -80,12 +78,19 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
       setNoteError('Delay reason is required when stage is delayed.')
       return
     }
-
     setNoteError(null)
     const payment = paymentValues[stageName]?.trim() || null
     startTransition(async () => {
       await updateStageDate(projectId, stageName, date || null, note, payment)
       setEditing(null)
+    })
+  }
+
+  function handleFinishingToggle(stageName: string, checked: boolean) {
+    const today = new Date().toISOString().split('T')[0]
+    const date = checked ? today : null
+    startTransition(async () => {
+      await updateStageDate(projectId, stageName, date, null, null)
     })
   }
 
@@ -112,6 +117,57 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             const savedNote = stageNotes[t.stage_name]
             const savedPayment = stagePayments[t.stage_name]
 
+            // ── Finishing stage: checkbox only ────────────────────────
+            if (t.category === 'finishing') {
+              return (
+                <tr
+                  key={t.stage_name}
+                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                >
+                  <td className="px-4 py-2.5 font-medium text-gray-800">{t.stage_name}</td>
+                  <td className="px-4 py-2.5">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">finishing</span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <label className="flex items-center gap-2.5 cursor-pointer group w-fit">
+                      <input
+                        type="checkbox"
+                        checked={!!currentDate}
+                        disabled={isPending}
+                        onChange={e => handleFinishingToggle(t.stage_name, e.target.checked)}
+                        className="w-4 h-4 rounded accent-green-700 cursor-pointer disabled:cursor-wait"
+                      />
+                      {currentDate ? (
+                        <span className="text-xs text-gray-600">
+                          {new Date(currentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300 italic group-hover:text-gray-400 transition-colors">Not done</span>
+                      )}
+                    </label>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <span className="text-gray-500 text-xs">
+                      {savedPayment
+                        ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : <span className="text-gray-300">—</span>}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-center text-gray-600">
+                    {s?.days_from_mob != null ? `${s.days_from_mob}d` : '—'}
+                  </td>
+                  <td className="px-4 py-2.5 text-center text-gray-400 text-xs">{t.target_days}d</td>
+                  <td className="px-4 py-2.5 text-center">
+                    <span className="text-gray-300 text-xs">—</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    {s?.stage_status ? <StatusBadge status={s.stage_status} /> : <StatusBadge status="no_data" />}
+                  </td>
+                </tr>
+              )
+            }
+
+            // ── Structure stage: full date + delay reason tracking ─────
             const editingDate = dateValues[t.stage_name] ?? ''
             const delayed = isEditing && editingDate ? willBeDelayed(t.stage_name, editingDate) : false
             const noteRequired = delayed
@@ -126,9 +182,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                 >
                   <td className="px-4 py-2.5 font-medium text-gray-800">{t.stage_name}</td>
                   <td className="px-4 py-2.5">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${t.category === 'structure' ? 'bg-green-50 text-green-700' : 'bg-purple-50 text-purple-700'}`}>
-                      {t.category}
-                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">structure</span>
                   </td>
                   <td className="px-4 py-2.5">
                     {isEditing ? (
@@ -145,7 +199,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                           />
                           <button
                             disabled={isPending || !canSave}
-                            onClick={() => handleSave(t.stage_name)}
+                            onClick={() => handleStructureSave(t.stage_name)}
                             className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Save
@@ -157,8 +211,6 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                             <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Delayed</span>
                           )}
                         </div>
-
-                        {/* Delay reason */}
                         <div className="flex items-start gap-2 flex-wrap">
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1">
@@ -178,9 +230,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                               </select>
                               {noteRequired && <span className="text-red-500 text-xs font-medium">*</span>}
                             </div>
-                            {noteError && (
-                              <p className="text-xs text-red-600">{noteError}</p>
-                            )}
+                            {noteError && <p className="text-xs text-red-600">{noteError}</p>}
                           </div>
                           {noteValue === 'Other' && (
                             <input
