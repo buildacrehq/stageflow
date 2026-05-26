@@ -31,6 +31,12 @@ export async function getCurrentUser() {
 }
 
 export async function getUserRole(): Promise<'admin' | 'staff' | 'coordinator' | 'viewer'> {
+  // Read from cookie set at login — avoids a DB round-trip on every render
+  const cookieStore = await cookies()
+  const fromCookie = cookieStore.get('sf_role')?.value
+  if (fromCookie) return fromCookie as 'admin' | 'staff' | 'coordinator' | 'viewer'
+
+  // Fallback to DB if cookie missing (e.g. first load after deploy)
   const user = await getCurrentUser()
   if (!user) return 'staff'
   const sb = createClient(

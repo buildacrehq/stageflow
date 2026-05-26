@@ -30,9 +30,6 @@ export async function updateStageDate(
   }
 
   revalidatePath(`/projects/${projectId}`)
-  revalidatePath('/projects')
-  revalidatePath('/')
-  revalidatePath('/coordinator')
 }
 
 export async function updateStageTargetDuration(
@@ -62,8 +59,6 @@ export async function updateStageTargetDuration(
   }
 
   revalidatePath('/settings')
-  revalidatePath('/')
-  revalidatePath('/analysis')
 }
 
 export async function signIn(formData: FormData): Promise<{ error?: string }> {
@@ -126,7 +121,6 @@ export async function createProject(data: {
 
   if (error) throw error
   revalidatePath('/projects')
-  revalidatePath('/')
   return project.id as string
 }
 
@@ -154,7 +148,6 @@ export async function deleteProject(id: string) {
   const sb = getAdminClient()
   await sb.from('projects').delete().eq('id', id)
   revalidatePath('/projects')
-  revalidatePath('/')
   redirect('/projects')
 }
 
@@ -247,7 +240,4 @@ export async function updateProject(id: string, data: {
   const sb = getAdminClient()
   await sb.from('projects').update(data).eq('id', id)
   revalidatePath(`/projects/${id}`)
-  revalidatePath('/projects')
-  revalidatePath('/')
-  revalidatePath('/coordinator')
 }
