@@ -27,7 +27,7 @@ export function AnalysisCharts({
   const delayData = stageAnalysis
     .filter(s => s.project_count > 0)
     .map(s => ({
-      name: s.stage_name.replace(' Lintel', ' L').replace(' Roof', ' R').replace('Foundation ', 'Fnd ').replace('Plastering ', 'Pls ').replace('Flooring ', 'Flr ').replace('Plumbing ', 'Plmb '),
+      name: s.stage_name.replace(' Wall', ' W').replace(' Roof', ' R').replace('Foundation ', 'Fnd ').replace('Plastering ', 'Pls ').replace('Flooring ', 'Flr ').replace('Plumbing ', 'Plmb '),
       avgDelay: s.avg_delay_days ?? 0,
       onTimePct: s.on_time_pct ?? 0,
       count: s.project_count,
@@ -35,9 +35,9 @@ export function AnalysisCharts({
 
   // Gap between consecutive structure stage pairs
   const pairs: [string, string][] = [
-    ['Foundation 1', 'GF Lintel'], ['GF Lintel', 'GF Roof'],
-    ['GF Roof', 'FF Lintel'], ['FF Lintel', 'FF Roof'],
-    ['FF Roof', 'SF Lintel'], ['SF Lintel', 'SF Roof'],
+    ['Foundation 1', 'GF Wall'], ['GF Wall', 'GF Roof'],
+    ['GF Roof', 'FF Wall'], ['FF Wall', 'FF Roof'],
+    ['FF Roof', 'SF Wall'], ['SF Wall', 'SF Roof'],
   ]
   const gapData = pairs.map(([a, b]) => {
     const aStages = allStages.filter(s => s.stage_name === a && s.completed_date)
@@ -51,7 +51,7 @@ export function AnalysisCharts({
       }
     })
     return {
-      name: `${a.replace(' Lintel',' L').replace(' Roof',' R').replace('Foundation ','Fnd ')} → ${b.replace(' Lintel',' L').replace(' Roof',' R')}`,
+      name: `${a.replace(' Wall',' W').replace(' Roof',' R').replace('Foundation ','Fnd ')} → ${b.replace(' Wall',' W').replace(' Roof',' R')}`,
       avg: gaps.length ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : null,
       n: gaps.length,
     }
