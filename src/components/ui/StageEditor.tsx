@@ -95,23 +95,10 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
     })
   }
 
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm min-w-160">
-        <thead>
-          <tr className="border-b border-gray-100 bg-gray-50">
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Stage</th>
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Category</th>
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Completed Date</th>
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Payment Date</th>
-            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Days from Mob</th>
-            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Target</th>
-            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Delay</th>
-            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visibleTargets.map(t => {
+  const structureTargets = visibleTargets.filter(t => t.category === 'structure')
+  const finishingTargets = visibleTargets.filter(t => t.category === 'finishing')
+
+  function renderRow(t: (typeof visibleTargets)[0]) {
             const s = stageMap[t.stage_name]
             const isEditing = editing === t.stage_name
             const currentDate = s?.completed_date ?? ''
@@ -327,7 +314,41 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                 )}
               </>
             )
-          })}
+  }
+
+  const COLS = 8
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-160">
+        <thead>
+          <tr className="border-b border-gray-100 bg-gray-50">
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Stage</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Category</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Completed Date</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Payment Date</th>
+            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Days from Mob</th>
+            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Target</th>
+            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Delay</th>
+            <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {/* Structure section */}
+          <tr className="bg-green-50/60 border-b border-gray-100">
+            <td colSpan={COLS} className="px-4 py-2">
+              <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Structure Stages</span>
+            </td>
+          </tr>
+          {structureTargets.map(t => renderRow(t))}
+
+          {/* Finishing section */}
+          <tr className="bg-purple-50/60 border-b border-gray-100">
+            <td colSpan={COLS} className="px-4 py-2">
+              <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Finishing Stages</span>
+            </td>
+          </tr>
+          {finishingTargets.map(t => renderRow(t))}
         </tbody>
       </table>
     </div>
