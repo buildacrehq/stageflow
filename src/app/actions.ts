@@ -202,7 +202,7 @@ export async function deleteUser(userId: string): Promise<{ error?: string }> {
 }
 
 export async function createUser(
-  email: string, password: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'client'
+  email: string, password: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'client', phone?: string
 ): Promise<{ error?: string }> {
   await requireRole('admin')
   const sb = getAdminClient()
@@ -212,7 +212,7 @@ export async function createUser(
     email_confirm: true,
   })
   if (error) return { error: error.message }
-  await sb.from('profiles').insert({ id: data.user.id, name: email, role })
+  await sb.from('profiles').insert({ id: data.user.id, name: email, role, phone: phone || null })
   revalidatePath('/settings')
   return {}
 }

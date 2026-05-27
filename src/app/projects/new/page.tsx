@@ -9,8 +9,8 @@ export default async function NewProjectPage() {
   const backLabel = role === 'coordinator' ? '← My Projects' : '← Projects'
 
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const { data: engineerProfiles } = await sb.from('profiles').select('id, name').eq('role', 'site_engineer').order('name')
-  const engineers = (engineerProfiles ?? []) as { id: string; name: string }[]
+  const { data: engineerProfiles } = await sb.from('profiles').select('id, name, phone').eq('role', 'site_engineer').order('name')
+  const engineers = (engineerProfiles ?? []) as { id: string; name: string; phone: string | null }[]
 
   return (
     <div className="space-y-6 max-w-2xl">

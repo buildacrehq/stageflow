@@ -5,7 +5,7 @@ import { createProject, updateProject } from '@/app/actions'
 import { useBeforeUnload } from '@/lib/hooks'
 import type { Project } from '@/types'
 
-interface Engineer { id: string; name: string }
+interface Engineer { id: string; name: string; phone?: string | null }
 
 export function ProjectForm({ project, engineers = [] }: { project?: Project; engineers?: Engineer[] }) {
   const router = useRouter()
@@ -15,6 +15,7 @@ export function ProjectForm({ project, engineers = [] }: { project?: Project; en
   const [engineerName, setEngineerName] = useState(
     engineers.find(e => e.name === project?.engineer_name)?.name ?? ''
   )
+  const [engineerPhone, setEngineerPhone] = useState(project?.engineer_phone ?? '')
   const [isDirty, setIsDirty] = useState(false)
 
   useBeforeUnload(isDirty)
@@ -89,7 +90,11 @@ export function ProjectForm({ project, engineers = [] }: { project?: Project; en
             <select
               name="engineer_name"
               value={engineerName}
-              onChange={e => setEngineerName(e.target.value)}
+              onChange={e => {
+                setEngineerName(e.target.value)
+                const eng = engineers.find(en => en.name === e.target.value)
+                setEngineerPhone(eng?.phone ?? '')
+              }}
               className={inputCls + ' bg-white'}
             >
               <option value="">Not assigned</option>
@@ -104,9 +109,9 @@ export function ProjectForm({ project, engineers = [] }: { project?: Project; en
               name="engineer_phone"
               inputMode="numeric"
               maxLength={10}
-              defaultValue={project?.engineer_phone ?? ''}
+              value={engineerPhone}
+              onChange={e => setEngineerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder="e.g. 9876543210"
-              onInput={e => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '').slice(0, 10) }}
               className={inputCls}
             />
           </div>

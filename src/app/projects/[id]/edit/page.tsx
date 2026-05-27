@@ -35,7 +35,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     sb.from('projects').select('*').eq('id', id).single(),
     sb.from('stage_targets').select('*').order('sort_order'),
     sb.from('project_stage_overrides').select('*').eq('project_id', id),
-    sb.from('profiles').select('id, name').eq('role', 'site_engineer').order('name'),
+    sb.from('profiles').select('id, name, phone').eq('role', 'site_engineer').order('name'),
   ])
 
   if (!projectRes.data) notFound()
@@ -43,7 +43,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
   const project = projectRes.data as Project
   const targets = (targetsRes.data ?? []) as StageTarget[]
   const overrides = (overridesRes.data ?? []) as ProjectStageOverride[]
-  const engineers = (engineersRes.data ?? []) as { id: string; name: string }[]
+  const engineers = (engineersRes.data ?? []) as { id: string; name: string; phone: string | null }[]
 
   return (
     <div className="space-y-6 max-w-2xl">
