@@ -69,8 +69,13 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
     const key = `${activeSize}-${stageName}`
     const target = parseInt(rawInputs[key]?.target ?? '0', 10) || 0
     const buffer = parseInt(rawInputs[key]?.buffer ?? '0', 10) || 0
-    setVal(activeSize, stageName, 'target', target)
-    setVal(activeSize, stageName, 'buffer', buffer)
+    setOverrides(prev => ({
+      ...prev,
+      [activeSize]: {
+        ...(prev[activeSize] ?? {}),
+        [stageName]: { target, buffer },
+      },
+    }))
     startTransition(async () => {
       await upsertPlotSizeTarget(activeSize, stageName, target, buffer)
       setEditing(null)
@@ -103,13 +108,11 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                 const key = `${activeSize}-${t.stage_name}`
                 const isEditing = editing === key
                 const justSaved = saved === key
-                const hasOverride = !!overrides[activeSize]?.[t.stage_name]
 
                 return (
                   <tr key={t.stage_name} className={`border-b border-gray-50 transition-colors ${isEditing ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
                     <td className="px-5 py-2.5 font-medium text-gray-800">
                       {t.stage_name}
-                      {hasOverride && <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">custom</span>}
                     </td>
                     <td className="px-4 py-2.5 text-center">
                       {isEditing ? (
@@ -120,7 +123,7 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                           className="w-20 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                       ) : (
-                        <span className={`font-medium ${hasOverride ? 'text-amber-700' : 'text-gray-700'}`}>
+                        <span className="font-medium text-gray-700">
                           {getVal(activeSize, t.stage_name, 'target')}d
                         </span>
                       )}
