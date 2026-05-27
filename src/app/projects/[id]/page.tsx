@@ -115,11 +115,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
   } else if (role === 'coordinator') {
     const client = sb()
-    // 3 parallel queries instead of 7
-    const [profilesRes, engAssignRes, clientAssignRes] = await Promise.all([
+    const [profilesRes, engAssignRes, clientAssignRes, selfRes] = await Promise.all([
       client.from('profiles').select('id, name, role').in('role', ['site_engineer', 'client']).order('name'),
       client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
       client.from('client_projects').select('user_id').eq('project_id', id),
+      client.from('profiles').select('id, name').eq('id', user!.id).single(),
     ])
     const profileMap = Object.fromEntries((profilesRes.data ?? []).map(p => [p.id, p as { id: string; name: string; role: string }]))
     allEngineers = (profilesRes.data ?? []).filter(p => p.role === 'site_engineer').map(p => ({ id: p.id, name: p.name as string }))
@@ -135,6 +135,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
     const assignedClientIds = new Set((clientAssignRes.data ?? []).map(r => r.user_id))
     assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
+    if (selfRes.data) assignedCoordinators = [{ id: selfRes.data.id, name: selfRes.data.name as string }]
   }
 
   const doneStages = stages.filter(s => s.completed_date)
@@ -160,7 +161,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       {(role === 'admin' || role === 'coordinator') && (
         <ProjectTeamPanel
           projectId={id}
-          showCoordinators={role === 'admin'}
+          showCoordinators={true}
+          readOnlyCoordinators={role === 'coordinator'}
           allCoordinators={allCoordinators}
           initialCoordinators={assignedCoordinators}
           coordinatorHistory={coordinatorHistory}

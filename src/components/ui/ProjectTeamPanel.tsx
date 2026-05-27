@@ -13,6 +13,7 @@ interface HistoryEntry { name: string; assigned_at: string | null; removed_at: s
 interface Props {
   projectId: string
   showCoordinators: boolean
+  readOnlyCoordinators?: boolean
   allCoordinators: Person[]
   initialCoordinators: Person[]
   coordinatorHistory?: HistoryEntry[]
@@ -55,7 +56,7 @@ function AssignSelect({ placeholder, options, onSelect, disabled }: {
 }
 
 export function ProjectTeamPanel({
-  projectId, showCoordinators,
+  projectId, showCoordinators, readOnlyCoordinators = false,
   allCoordinators, initialCoordinators, coordinatorHistory = [],
   allEngineers, initialEngineers, engineerHistory = [],
   allClients, initialClients,
@@ -100,16 +101,18 @@ export function ProjectTeamPanel({
 
   const cols = showCoordinators ? 3 : 2
 
-  function Chips({ items, color, onRemove }: { items: Person[]; color: string; onRemove: (id: string) => void }) {
+  function Chips({ items, color, onRemove, readOnly }: { items: Person[]; color: string; onRemove: (id: string) => void; readOnly?: boolean }) {
     if (items.length === 0) return <p className="text-xs text-gray-400 italic">None assigned</p>
     return (
       <div className="flex flex-wrap gap-1.5">
         {items.map(p => (
           <div key={p.id} className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${color}`}>
             <span>{p.name}</span>
-            <button onClick={() => onRemove(p.id)} disabled={isPending} className="opacity-50 hover:opacity-100 hover:text-red-500 transition-opacity disabled:opacity-30">
-              <X size={10} />
-            </button>
+            {!readOnly && (
+              <button onClick={() => onRemove(p.id)} disabled={isPending} className="opacity-50 hover:opacity-100 hover:text-red-500 transition-opacity disabled:opacity-30">
+                <X size={10} />
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -128,9 +131,9 @@ export function ProjectTeamPanel({
                 <span className="text-xs font-semibold text-gray-600">Coordinators</span>
                 {coords.length > 0 && <span className="text-xs px-1 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">{coords.length}</span>}
               </div>
-              <AssignSelect placeholder="Assign" options={unassignedCoords} onSelect={p => assign(p, setCoords as (fn: (prev: Person[]) => Person[]) => void, assignCoordinatorProject)} disabled={isPending} />
+              {!readOnlyCoordinators && <AssignSelect placeholder="Assign" options={unassignedCoords} onSelect={p => assign(p, setCoords as (fn: (prev: Person[]) => Person[]) => void, assignCoordinatorProject)} disabled={isPending} />}
             </div>
-            <Chips items={coords} color="bg-amber-50 border-amber-200 text-amber-800" onRemove={id => remove(id, setCoords as (fn: (prev: Person[]) => Person[]) => void, removeCoordinatorProject)} />
+            <Chips items={coords} color="bg-amber-50 border-amber-200 text-amber-800" readOnly={readOnlyCoordinators} onRemove={id => remove(id, setCoords as (fn: (prev: Person[]) => Person[]) => void, removeCoordinatorProject)} />
             {coordinatorHistory.length > 0 && (
               <div>
                 <button onClick={() => setShowCoordHistory(v => !v)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
