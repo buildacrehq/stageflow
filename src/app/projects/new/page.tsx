@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js'
 import { ProjectForm } from '@/components/ui/ProjectForm'
 import { getUserRole } from '@/lib/supabase-server'
 import Link from 'next/link'
@@ -6,6 +7,10 @@ export default async function NewProjectPage() {
   const role = await getUserRole()
   const backHref = role === 'coordinator' ? '/coordinator/projects' : '/projects'
   const backLabel = role === 'coordinator' ? '← My Projects' : '← Projects'
+
+  const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const { data: engineerProfiles } = await sb.from('profiles').select('id, name').eq('role', 'site_engineer').order('name')
+  const engineers = (engineerProfiles ?? []) as { id: string; name: string }[]
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -17,7 +22,7 @@ export default async function NewProjectPage() {
         </div>
       </div>
       <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <ProjectForm />
+        <ProjectForm engineers={engineers} />
       </div>
     </div>
   )

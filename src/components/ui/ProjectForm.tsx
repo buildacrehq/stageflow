@@ -4,11 +4,16 @@ import { useRouter } from 'next/navigation'
 import { createProject, updateProject } from '@/app/actions'
 import type { Project } from '@/types'
 
-export function ProjectForm({ project }: { project?: Project }) {
+interface Engineer { id: string; name: string }
+
+export function ProjectForm({ project, engineers = [] }: { project?: Project; engineers?: Engineer[] }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [showMap, setShowMap] = useState(!!project?.maps_link)
+  const [engineerName, setEngineerName] = useState(
+    engineers.find(e => e.name === project?.engineer_name)?.name ?? ''
+  )
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -60,19 +65,45 @@ export function ProjectForm({ project }: { project?: Project }) {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Client phone</label>
-            <input name="client_phone" type="tel" defaultValue={project?.client_phone ?? ''} placeholder="e.g. 9876543210" className={inputCls} />
+            <input
+              name="client_phone"
+              inputMode="numeric"
+              maxLength={10}
+              defaultValue={project?.client_phone ?? ''}
+              placeholder="e.g. 9876543210"
+              onInput={e => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '').slice(0, 10) }}
+              className={inputCls}
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Location</label>
             <input name="location" defaultValue={project?.location ?? ''} placeholder="e.g. Whitefield, Bangalore" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Site engineer name</label>
-            <input name="engineer_name" defaultValue={project?.engineer_name ?? ''} placeholder="e.g. Ramesh Kumar" className={inputCls} />
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Site engineer</label>
+            <select
+              name="engineer_name"
+              value={engineerName}
+              onChange={e => setEngineerName(e.target.value)}
+              className={inputCls + ' bg-white'}
+            >
+              <option value="">Not assigned</option>
+              {engineers.map(e => (
+                <option key={e.id} value={e.name}>{e.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Site engineer phone</label>
-            <input name="engineer_phone" type="tel" defaultValue={project?.engineer_phone ?? ''} placeholder="e.g. 9876543210" className={inputCls} />
+            <input
+              name="engineer_phone"
+              inputMode="numeric"
+              maxLength={10}
+              defaultValue={project?.engineer_phone ?? ''}
+              placeholder="e.g. 9876543210"
+              onInput={e => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '').slice(0, 10) }}
+              className={inputCls}
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Mobilisation date</label>

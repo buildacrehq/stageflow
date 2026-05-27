@@ -31,10 +31,11 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     if (!data) redirect('/coordinator/projects')
   }
 
-  const [projectRes, targetsRes, overridesRes] = await Promise.all([
+  const [projectRes, targetsRes, overridesRes, engineersRes] = await Promise.all([
     sb.from('projects').select('*').eq('id', id).single(),
     sb.from('stage_targets').select('*').order('sort_order'),
     sb.from('project_stage_overrides').select('*').eq('project_id', id),
+    sb.from('profiles').select('id, name').eq('role', 'site_engineer').order('name'),
   ])
 
   if (!projectRes.data) notFound()
@@ -42,6 +43,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
   const project = projectRes.data as Project
   const targets = (targetsRes.data ?? []) as StageTarget[]
   const overrides = (overridesRes.data ?? []) as ProjectStageOverride[]
+  const engineers = (engineersRes.data ?? []) as { id: string; name: string }[]
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -55,7 +57,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
       {/* Project details form */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <ProjectForm project={project} />
+        <ProjectForm project={project} engineers={engineers} />
       </div>
 
       {/* Stage timeline overrides — admin + coordinator */}
