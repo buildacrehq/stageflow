@@ -40,8 +40,8 @@ export function ProjectAnalysis({ stages, targets, mobDate, floors }: Props) {
       }
     })
 
-  // Stages not yet completed
-  const upcoming = visibleTargets.filter(t => !stageMap.get(t.stage_name)?.completed_date)
+  // Stages not yet completed — cap at 5
+  const upcoming = visibleTargets.filter(t => !stageMap.get(t.stage_name)?.completed_date).slice(0, 5)
   const upcomingWithDates = upcoming.map((t, i) => {
     if (!mobDate) return { stage: t.stage_name, dueDate: null as Date | null, daysLeft: null as number | null, overdue: false, category: t.category, isNext: i === 0 }
     const mob = new Date(mobDate)
