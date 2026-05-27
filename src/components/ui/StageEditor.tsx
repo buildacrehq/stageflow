@@ -185,7 +185,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                   <td className="px-4 py-2.5 text-center text-gray-600">
                     {s?.days_from_mob != null ? `${s.days_from_mob}d` : '—'}
                   </td>
-                  <td className="px-4 py-2.5 text-center text-gray-400 text-xs">{t.target_days}d</td>
+                  <td className="px-4 py-2.5 text-center text-gray-300 text-xs">—</td>
                   <td className="px-4 py-2.5 text-center">
                     <span className="text-gray-300 text-xs">—</span>
                   </td>
