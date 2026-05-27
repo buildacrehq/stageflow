@@ -24,9 +24,10 @@ interface Props {
   floors: string | null
   stageNotes: Record<string, string | null>
   stagePayments: Record<string, string | null>
+  readOnly?: boolean
 }
 
-export function StageEditor({ projectId, stages, targets, mobDate, floors, stageNotes, stagePayments }: Props) {
+export function StageEditor({ projectId, stages, targets, mobDate, floors, stageNotes, stagePayments, readOnly = false }: Props) {
   const [editing, setEditing] = useState<string | null>(null)
   const [noteValues, setNoteValues] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(stageNotes).map(([k, v]) => [k, v ?? '']))
@@ -123,78 +124,82 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             const savedNote = localNotes[t.stage_name]
             const savedPayment = localPayments[t.stage_name]
 
-            // ── Finishing stage: checkbox only ────────────────────────
+            // ── Finishing stage ────────────────────────
             if (t.category === 'finishing') {
               return (
-                <tr
-                  key={t.stage_name}
-                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                >
+                <tr key={t.stage_name} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-2.5 font-medium text-gray-800">{t.stage_name}</td>
                   <td className="px-4 py-2.5">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">finishing</span>
                   </td>
                   <td className="px-4 py-2.5">
-                    <label className="flex items-center gap-2.5 cursor-pointer group w-fit">
-                      <input
-                        type="checkbox"
-                        checked={!!currentDate}
-                        disabled={isPending}
-                        onChange={e => handleFinishingToggle(t.stage_name, e.target.checked)}
-                        className="w-4 h-4 rounded accent-green-700 cursor-pointer disabled:cursor-wait"
-                      />
-                      {currentDate ? (
-                        <span className="text-xs text-gray-600">
-                          {new Date(currentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-300 italic group-hover:text-gray-400 transition-colors">Not done</span>
-                      )}
-                    </label>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {paymentEditing === t.stage_name ? (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="date"
-                          autoFocus
-                          value={paymentValues[t.stage_name] ?? ''}
-                          onChange={e => setPaymentValues(prev => ({ ...prev, [t.stage_name]: e.target.value }))}
-                          className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
-                        />
-                        <button
-                          disabled={isPending}
-                          onClick={() => {
-                            const payment = paymentValues[t.stage_name]?.trim() || null
-                            setPaymentEditing(null)
-                            setLocalPayments(prev => ({ ...prev, [t.stage_name]: payment }))
-                            startTransition(async () => {
-                              await updateStageDate(projectId, t.stage_name, stageMap[t.stage_name]?.completed_date ?? null, null, payment)
-                            })
-                          }}
-                          className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50"
-                        >Save</button>
-                        <button onClick={() => setPaymentEditing(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
-                      </div>
+                    {readOnly ? (
+                      <span className="text-xs text-gray-600">
+                        {currentDate
+                          ? new Date(currentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : <span className="text-gray-300 italic">Not done</span>}
+                      </span>
                     ) : (
-                      <button
-                        onClick={() => setPaymentEditing(t.stage_name)}
-                        className="text-left text-gray-700 hover:text-green-700 transition-colors"
-                      >
-                        {savedPayment
-                          ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : <span className="text-gray-300 italic text-xs">Click to add date</span>
-                        }
-                      </button>
+                      <label className="flex items-center gap-2.5 cursor-pointer group w-fit">
+                        <input
+                          type="checkbox"
+                          checked={!!currentDate}
+                          disabled={isPending}
+                          onChange={e => handleFinishingToggle(t.stage_name, e.target.checked)}
+                          className="w-4 h-4 rounded accent-green-700 cursor-pointer disabled:cursor-wait"
+                        />
+                        {currentDate ? (
+                          <span className="text-xs text-gray-600">
+                            {new Date(currentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-300 italic group-hover:text-gray-400 transition-colors">Not done</span>
+                        )}
+                      </label>
                     )}
                   </td>
+                  {!readOnly && (
+                    <td className="px-4 py-2.5">
+                      {paymentEditing === t.stage_name ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="date"
+                            autoFocus
+                            value={paymentValues[t.stage_name] ?? ''}
+                            onChange={e => setPaymentValues(prev => ({ ...prev, [t.stage_name]: e.target.value }))}
+                            className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
+                          />
+                          <button
+                            disabled={isPending}
+                            onClick={() => {
+                              const payment = paymentValues[t.stage_name]?.trim() || null
+                              setPaymentEditing(null)
+                              setLocalPayments(prev => ({ ...prev, [t.stage_name]: payment }))
+                              startTransition(async () => {
+                                await updateStageDate(projectId, t.stage_name, stageMap[t.stage_name]?.completed_date ?? null, null, payment)
+                              })
+                            }}
+                            className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50"
+                          >Save</button>
+                          <button onClick={() => setPaymentEditing(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setPaymentEditing(t.stage_name)}
+                          className="text-left text-gray-700 hover:text-green-700 transition-colors"
+                        >
+                          {savedPayment
+                            ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : <span className="text-gray-300 italic text-xs">Click to add date</span>}
+                        </button>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-center text-gray-600">
                     {s?.days_from_mob != null ? `${s.days_from_mob}d` : '—'}
                   </td>
                   <td className="px-4 py-2.5 text-center text-gray-300 text-xs">—</td>
-                  <td className="px-4 py-2.5 text-center">
-                    <span className="text-gray-300 text-xs">—</span>
-                  </td>
+                  <td className="px-4 py-2.5 text-center"><span className="text-gray-300 text-xs">—</span></td>
                   <td className="px-4 py-2.5 text-center">
                     {s?.stage_status ? <StatusBadge status={s.stage_status} /> : <StatusBadge status="no_data" />}
                   </td>
@@ -220,7 +225,13 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">structure</span>
                   </td>
                   <td className="px-4 py-2.5">
-                    {isEditing ? (
+                    {readOnly ? (
+                      <span className="text-xs text-gray-700">
+                        {currentDate
+                          ? new Date(currentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : <span className="text-gray-300 italic">Not done</span>}
+                      </span>
+                    ) : isEditing ? (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <input
@@ -236,15 +247,9 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                             disabled={isPending || !canSave}
                             onClick={() => handleStructureSave(t.stage_name)}
                             className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Save
-                          </button>
-                          <button onClick={() => { setEditing(null); setNoteError(null) }} className="px-2 py-1 text-gray-500 text-xs hover:text-gray-700">
-                            Cancel
-                          </button>
-                          {delayed && (
-                            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Delayed</span>
-                          )}
+                          >Save</button>
+                          <button onClick={() => { setEditing(null); setNoteError(null) }} className="px-2 py-1 text-gray-500 text-xs hover:text-gray-700">Cancel</button>
+                          {delayed && <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Delayed</span>}
                         </div>
                         <div className="flex items-start gap-2 flex-wrap">
                           <div className="flex flex-col gap-1">
@@ -252,15 +257,9 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                               <select
                                 value={noteValue}
                                 onChange={e => { setNoteValues(prev => ({ ...prev, [t.stage_name]: e.target.value })); setNoteError(null) }}
-                                className={`border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 bg-white ${
-                                  noteRequired && !noteValue
-                                    ? 'border-red-400 focus:ring-red-500 text-red-600'
-                                    : 'border-gray-200 focus:ring-green-600 text-gray-600'
-                                }`}
+                                className={`border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 bg-white ${noteRequired && !noteValue ? 'border-red-400 focus:ring-red-500 text-red-600' : 'border-gray-200 focus:ring-green-600 text-gray-600'}`}
                               >
-                                <option value="">
-                                  {noteRequired ? 'Select delay reason (required)' : 'Reason for delay (optional)'}
-                                </option>
+                                <option value="">{noteRequired ? 'Select delay reason (required)' : 'Reason for delay (optional)'}</option>
                                 {DELAY_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                               </select>
                               {noteRequired && <span className="text-red-500 text-xs font-medium">*</span>}
@@ -268,47 +267,34 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                             {noteError && <p className="text-xs text-red-600">{noteError}</p>}
                           </div>
                           {noteValue === 'Other' && (
-                            <input
-                              type="text"
-                              placeholder="Describe reason…"
-                              id={`note-other-${t.stage_name}`}
-                              className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600 w-40"
-                            />
+                            <input type="text" placeholder="Describe reason…" id={`note-other-${t.stage_name}`}
+                              className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600 w-40" />
                           )}
                         </div>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => openEdit(t.stage_name)}
-                        className="text-left text-gray-700 hover:text-green-700 transition-colors"
-                      >
+                      <button onClick={() => openEdit(t.stage_name)} className="text-left text-gray-700 hover:text-green-700 transition-colors">
                         {currentDate
                           ? new Date(currentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : <span className="text-gray-300 italic text-xs">Click to add date</span>
-                        }
+                          : <span className="text-gray-300 italic text-xs">Click to add date</span>}
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-2.5">
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        value={paymentValues[t.stage_name] ?? ''}
-                        onChange={e => setPaymentValues(prev => ({ ...prev, [t.stage_name]: e.target.value }))}
-                        className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
-                      />
-                    ) : (
-                      <button
-                        onClick={() => openEdit(t.stage_name)}
-                        className="text-left text-gray-700 hover:text-green-700 transition-colors"
-                      >
-                        {savedPayment
-                          ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : <span className="text-gray-300 italic text-xs">Click to add date</span>
-                        }
-                      </button>
-                    )}
-                  </td>
+                  {!readOnly && (
+                    <td className="px-4 py-2.5">
+                      {isEditing ? (
+                        <input type="date" value={paymentValues[t.stage_name] ?? ''}
+                          onChange={e => setPaymentValues(prev => ({ ...prev, [t.stage_name]: e.target.value }))}
+                          className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600" />
+                      ) : (
+                        <button onClick={() => openEdit(t.stage_name)} className="text-left text-gray-700 hover:text-green-700 transition-colors">
+                          {savedPayment
+                            ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : <span className="text-gray-300 italic text-xs">Click to add date</span>}
+                        </button>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-center text-gray-600">
                     {s?.days_from_mob != null ? `${s.days_from_mob}d` : '—'}
                   </td>
@@ -335,7 +321,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             )
   }
 
-  const COLS = 8
+  const COLS = readOnly ? 7 : 8
 
   return (
     <div className="overflow-x-auto">
@@ -345,7 +331,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Stage</th>
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Category</th>
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Completed Date</th>
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Payment Date</th>
+            {!readOnly && <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Payment Date</th>}
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Days from Mob</th>
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Target</th>
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Delay</th>

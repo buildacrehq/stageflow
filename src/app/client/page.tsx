@@ -1,24 +1,30 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
-import { ClientProjectView } from '@/components/ui/ClientProjectView'
+import { ProjectHeader } from '@/components/ui/ProjectHeader'
+import { ProjectGantt } from '@/components/charts/ProjectGantt'
+import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
+import { StageEditor } from '@/components/ui/StageEditor'
 import type { StageStatusRow, StageTarget } from '@/types'
 
-export const revalidate = 60
+export const revalidate = 0
+
+function sb() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+}
 
 export default async function ClientPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-
   const role = await getUserRole()
   if (role !== 'client') redirect('/')
 
-  const sb = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const client = sb()
 
-  const { data: assignment } = await sb
+  const { data: assignment } = await client
     .from('client_projects')
     .select('project_id')
     .eq('user_id', user.id)
@@ -28,24 +34,71 @@ export default async function ClientPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <p className="text-gray-500 font-medium">No project assigned yet</p>
-        <p className="text-xs text-gray-400 mt-1">Contact your project manager to get access.</p>
+        <p className="text-xs text-gray-400 mt-1">Contact your coordinator to get access.</p>
       </div>
     )
   }
 
-  const [projectRes, stagesRes, targetsRes] = await Promise.all([
-    sb.from('projects').select('*').eq('id', assignment.project_id).single(),
-    sb.from('stage_status_view').select('*').eq('project_id', assignment.project_id).order('sort_order'),
-    sb.from('stage_targets').select('*').order('sort_order'),
+  const id = assignment.project_id
+
+  const [projectRes, stagesRes, targetsRes, stageDataRes] = await Promise.all([
+    client.from('projects').select('*').eq('id', id).single(),
+    client.from('stage_status_view').select('*').eq('project_id', id).order('sort_order'),
+    client.from('stage_targets').select('*').order('sort_order'),
+    client.from('project_stages').select('stage_name, notes, payment_date').eq('project_id', id),
   ])
 
   if (!projectRes.data) redirect('/login')
 
+  const project = projectRes.data
+  const stages = (stagesRes.data ?? []) as StageStatusRow[]
+  const targets = (targetsRes.data ?? []) as StageTarget[]
+  const stageNotes = Object.fromEntries(
+    (stageDataRes.data ?? []).map(r => [r.stage_name, r.notes as string | null])
+  )
+  const stagePayments = Object.fromEntries(
+    (stageDataRes.data ?? []).map(r => [r.stage_name, r.payment_date as string | null])
+  )
+
+  const doneStages = stages.filter(s => s.completed_date)
+  const onTime = doneStages.filter(s => s.stage_status === 'on_time').length
+  const buffer = doneStages.filter(s => s.stage_status === 'buffer').length
+  const delayed = doneStages.filter(s => s.stage_status === 'delayed').length
+
   return (
-    <ClientProjectView
-      project={projectRes.data}
-      stages={(stagesRes.data ?? []) as StageStatusRow[]}
-      targets={(targetsRes.data ?? []) as StageTarget[]}
-    />
+    <div className="space-y-6">
+      <ProjectHeader
+        project={project}
+        backHref="/client"
+        backLabel="My Project"
+        onTime={onTime}
+        buffer={buffer}
+        delayed={delayed}
+        role="client"
+      />
+
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <p className="text-sm font-medium text-gray-700 mb-4">Stage timeline</p>
+        <ProjectGantt stages={stages} />
+      </div>
+
+      <ProjectAnalysis stages={stages} targets={targets} mobDate={project.mob_date} floors={project.floors} />
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <p className="text-sm font-medium text-gray-700">Stage details</p>
+        </div>
+        <StageEditor
+          projectId={id}
+          stages={stages}
+          targets={targets}
+          mobDate={project.mob_date}
+          floors={project.floors}
+          stageNotes={stageNotes}
+          stagePayments={stagePayments}
+          readOnly
+        />
+      </div>
+    </div>
   )
 }
