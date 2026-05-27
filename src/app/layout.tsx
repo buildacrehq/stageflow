@@ -42,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {user && role === 'coordinator' && (
           <CoordinatorNavbar userEmail={user.email ?? ''} />
         )}
-        {user && role !== 'client' && role !== 'coordinator' && role !== 'site_engineer' && (
+        {user && role !== 'client' && role !== 'coordinator' && role !== 'site_engineer' && role !== 'project_manager' && (
           <Navbar userEmail={user.email ?? ''} role={role ?? 'admin'} />
         )}
         {user && <SessionWatcher />}

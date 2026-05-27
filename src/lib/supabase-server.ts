@@ -30,10 +30,10 @@ export async function getCurrentUser() {
   return user ?? null
 }
 
-export async function getUserRole(): Promise<'admin' | 'coordinator' | 'site_engineer' | 'client'> {
+export async function getUserRole(): Promise<'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client'> {
   const cookieStore = await cookies()
   const fromCookie = cookieStore.get('sf_role')?.value
-  if (fromCookie) return fromCookie as 'admin' | 'coordinator' | 'site_engineer' | 'client'
+  if (fromCookie) return fromCookie as 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client'
 
   const user = await getCurrentUser()
   if (!user) return 'client'
@@ -42,5 +42,5 @@ export async function getUserRole(): Promise<'admin' | 'coordinator' | 'site_eng
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
   const { data } = await sb.from('profiles').select('role').eq('id', user.id).single()
-  return (data?.role as 'admin' | 'coordinator' | 'site_engineer' | 'client') ?? 'client'
+  return (data?.role as 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client') ?? 'client'
 }

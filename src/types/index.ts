@@ -1,6 +1,7 @@
 export type StageCategory = 'structure' | 'finishing'
 export type ProjectStatus = 'active' | 'completed' | 'on_hold'
 export type StageStatus = 'on_time' | 'buffer' | 'delayed' | 'no_data'
+export type UserRole = 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client' | 'viewer'
 
 export interface StageTarget {
   id: string

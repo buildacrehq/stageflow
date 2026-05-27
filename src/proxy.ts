@@ -44,6 +44,12 @@ export async function proxy(request: NextRequest) {
     if (!allowed) return NextResponse.redirect(new URL('/engineer', request.url))
   }
 
+  // Project managers can only access /manager/*
+  if (role === 'project_manager') {
+    const allowed = pathname === '/manager' || pathname.startsWith('/manager/')
+    if (!allowed) return NextResponse.redirect(new URL('/manager', request.url))
+  }
+
   // Coordinators can only access /coordinator/* and /projects/*
   if (role === 'coordinator') {
     const allowed = pathname === '/coordinator'

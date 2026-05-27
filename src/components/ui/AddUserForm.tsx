@@ -7,12 +7,12 @@ export function AddUserForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
-  const [role, setRole] = useState<'admin' | 'coordinator' | 'site_engineer' | 'client'>('coordinator')
+  const [role, setRole] = useState<'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client'>('coordinator')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isPending, startTransition] = useTransition()
 
-  const showPhone = role === 'coordinator' || role === 'site_engineer'
+  const showPhone = role === 'coordinator' || role === 'site_engineer' || role === 'project_manager'
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -69,12 +69,13 @@ export function AddUserForm() {
           />
           <select
             value={role}
-            onChange={e => setRole(e.target.value as 'admin' | 'coordinator' | 'site_engineer' | 'client')}
+            onChange={e => setRole(e.target.value as 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client')}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-600"
           >
             <option value="admin">Admin</option>
             <option value="coordinator">Coordinator</option>
             <option value="site_engineer">Site Engineer</option>
+            <option value="project_manager">Project Manager</option>
             <option value="client">Client</option>
           </select>
         </div>

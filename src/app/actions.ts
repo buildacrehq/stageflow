@@ -85,6 +85,7 @@ export async function signIn(formData: FormData): Promise<{ error?: string }> {
 
   if (role === 'client') redirect('/client')
   if (role === 'site_engineer') redirect('/engineer')
+  if (role === 'project_manager') redirect('/manager')
   if (role === 'coordinator') redirect('/coordinator')
   redirect('/')
 }
@@ -201,8 +202,31 @@ export async function deleteUser(userId: string): Promise<{ error?: string }> {
   return {}
 }
 
+export async function assignProjectManagerProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  await requireRole('admin', 'coordinator')
+  const sb = getAdminClient()
+  const { error } = await sb.from('project_manager_projects').insert({
+    user_id: userId,
+    project_id: projectId,
+    assigned_at: new Date().toISOString(),
+  })
+  if (error) return { error: error.message }
+  return {}
+}
+
+export async function removeProjectManagerProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  await requireRole('admin', 'coordinator')
+  const sb = getAdminClient()
+  await sb.from('project_manager_projects')
+    .update({ removed_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('project_id', projectId)
+    .is('removed_at', null)
+  return {}
+}
+
 export async function createUser(
-  email: string, password: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'client', phone?: string
+  email: string, password: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client', phone?: string
 ): Promise<{ error?: string }> {
   await requireRole('admin')
   const sb = getAdminClient()
@@ -320,7 +344,7 @@ export async function removeSiteEngineerProject(userId: string, projectId: strin
 }
 
 export async function createUserAsCoordinator(
-  email: string, password: string, role: 'site_engineer' | 'client', phone?: string
+  email: string, password: string, role: 'site_engineer' | 'project_manager' | 'client', phone?: string
 ): Promise<{ error?: string }> {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()

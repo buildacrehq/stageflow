@@ -1,10 +1,11 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { UserCheck, HardHat, User, X, History } from 'lucide-react'
+import { UserCheck, HardHat, User, X, History, Briefcase } from 'lucide-react'
 import {
   assignCoordinatorProject, removeCoordinatorProject,
   assignSiteEngineerProject, removeSiteEngineerProject,
   assignClientProject, removeClientProject,
+  assignProjectManagerProject, removeProjectManagerProject,
 } from '@/app/actions'
 
 interface Person { id: string; name: string }
@@ -20,6 +21,9 @@ interface Props {
   allEngineers: Person[]
   initialEngineers: Person[]
   engineerHistory?: HistoryEntry[]
+  allManagers: Person[]
+  initialManagers: Person[]
+  managerHistory?: HistoryEntry[]
   allClients: Person[]
   initialClients: Person[]
 }
@@ -59,14 +63,17 @@ export function ProjectTeamPanel({
   projectId, showCoordinators, readOnlyCoordinators = false,
   allCoordinators, initialCoordinators, coordinatorHistory = [],
   allEngineers, initialEngineers, engineerHistory = [],
+  allManagers, initialManagers, managerHistory = [],
   allClients, initialClients,
 }: Props) {
   const [coords, setCoords] = useState(initialCoordinators)
   const [engineers, setEngineers] = useState(initialEngineers)
+  const [managers, setManagers] = useState(initialManagers)
   const [clients, setClients] = useState(initialClients)
   const [isPending, startTransition] = useTransition()
   const [showCoordHistory, setShowCoordHistory] = useState(false)
   const [showEngHistory, setShowEngHistory] = useState(false)
+  const [showMgrHistory, setShowMgrHistory] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function assign<T extends Person>(
@@ -97,9 +104,10 @@ export function ProjectTeamPanel({
 
   const unassignedCoords = allCoordinators.filter(c => !coords.find(a => a.id === c.id))
   const unassignedEngs = allEngineers.filter(e => !engineers.find(a => a.id === e.id))
+  const unassignedMgrs = allManagers.filter(m => !managers.find(a => a.id === m.id))
   const unassignedClients = allClients.filter(c => !clients.find(a => a.id === c.id))
 
-  const cols = showCoordinators ? 3 : 2
+  const cols = showCoordinators ? 4 : 3
 
   function Chips({ items, color, onRemove, readOnly }: { items: Person[]; color: string; onRemove: (id: string) => void; readOnly?: boolean }) {
     if (items.length === 0) return <p className="text-xs text-gray-400 italic">None assigned</p>
@@ -121,7 +129,7 @@ export function ProjectTeamPanel({
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className={`grid divide-x divide-gray-100 ${cols === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <div className={`grid divide-x divide-gray-100 ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
 
         {showCoordinators && (
           <div className="px-4 py-3 space-y-2">
@@ -169,6 +177,32 @@ export function ProjectTeamPanel({
               {showEngHistory && (
                 <div className="mt-1 space-y-0.5">
                   {engineerHistory.map((h, i) => (
+                    <div key={i} className="text-xs text-gray-500">{h.name} <span className="text-gray-300">{fmtDate(h.assigned_at)} → {fmtDate(h.removed_at)}</span></div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Briefcase size={12} className="text-gray-400 shrink-0" />
+              <span className="text-xs font-semibold text-gray-600">Proj. Managers</span>
+              {managers.length > 0 && <span className="text-xs px-1 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">{managers.length}</span>}
+            </div>
+            <AssignSelect placeholder="Assign" options={unassignedMgrs} onSelect={m => assign(m, setManagers as (fn: (prev: Person[]) => Person[]) => void, assignProjectManagerProject)} disabled={isPending} />
+          </div>
+          <Chips items={managers} color="bg-purple-50 border-purple-200 text-purple-800" onRemove={id => remove(id, setManagers as (fn: (prev: Person[]) => Person[]) => void, removeProjectManagerProject)} />
+          {managerHistory.length > 0 && (
+            <div>
+              <button onClick={() => setShowMgrHistory(v => !v)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                <History size={10} />{showMgrHistory ? 'Hide' : 'History'} ({managerHistory.length})
+              </button>
+              {showMgrHistory && (
+                <div className="mt-1 space-y-0.5">
+                  {managerHistory.map((h, i) => (
                     <div key={i} className="text-xs text-gray-500">{h.name} <span className="text-gray-300">{fmtDate(h.assigned_at)} → {fmtDate(h.removed_at)}</span></div>
                   ))}
                 </div>
