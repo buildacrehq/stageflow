@@ -21,14 +21,14 @@ export default async function CoordinatorOverviewPage() {
   )
 
   const { data: assignments } = await sb
-    .from('coordinator_projects').select('project_id').eq('user_id', user.id)
+    .from('coordinator_projects').select('project_id').eq('user_id', user.id).is('removed_at', null)
   const projectIds = (assignments ?? []).map(a => a.project_id)
 
   if (projectIds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <p className="text-gray-500 font-medium">No projects assigned yet</p>
-        <p className="text-xs text-gray-400 mt-1">Contact your admin to get projects assigned.</p>
+        <p className="text-gray-500 font-medium">No projects yet</p>
+        <p className="text-xs text-gray-400 mt-1">Create a new project from the sidebar — you'll be auto-assigned to it.</p>
       </div>
     )
   }

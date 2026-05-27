@@ -18,7 +18,7 @@ export default async function CoordinatorProjectsPage() {
   )
 
   const { data: assignments } = await sb
-    .from('coordinator_projects').select('project_id').eq('user_id', user.id)
+    .from('coordinator_projects').select('project_id').eq('user_id', user.id).is('removed_at', null)
   const projectIds = (assignments ?? []).map(a => a.project_id)
 
   if (projectIds.length === 0) {
@@ -30,19 +30,15 @@ export default async function CoordinatorProjectsPage() {
     )
   }
 
-  const [summariesRes, completedStagesRes, targetsRes, managersRes] = await Promise.all([
+  const [summariesRes, completedStagesRes, targetsRes] = await Promise.all([
     sb.from('project_summary_view').select('*').in('id', projectIds).order('mob_date', { ascending: false }),
     sb.from('project_stages').select('project_id, stage_name').not('completed_date', 'is', null).in('project_id', projectIds),
     sb.from('stage_targets').select('stage_name, sort_order').order('sort_order'),
-    sb.from('projects').select('id, project_manager').in('id', projectIds),
   ])
 
   const projects = (summariesRes.data ?? []) as ProjectSummary[]
   const completedStages = completedStagesRes.data ?? []
   const targets = targetsRes.data ?? []
-  const projectManagerMap = Object.fromEntries(
-    (managersRes.data ?? []).map(p => [p.id, p.project_manager as string | null])
-  )
 
   const completedMap = new Map<string, Set<string>>()
   completedStages.forEach(({ project_id, stage_name }) => {
@@ -66,7 +62,6 @@ export default async function CoordinatorProjectsPage() {
       <ProjectsTable
         projects={projects}
         currentStageMap={currentStageMap}
-        projectManagerMap={projectManagerMap}
       />
     </div>
   )

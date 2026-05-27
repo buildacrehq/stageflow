@@ -51,14 +51,14 @@ function LogoutButton({ isPending, onLogout }: { isPending: boolean; onLogout: (
   )
 }
 
-function UserBadge({ email, role }: { email: string; role: 'admin' | 'staff' }) {
+function UserBadge({ email, role }: { email: string; role: 'admin' | 'site_engineer' }) {
   return (
     <div className="px-3 py-2 bg-gray-50 rounded-lg">
       <div className="flex items-center justify-between gap-2 mb-0.5">
         <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
           role === 'admin' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'
         }`}>
-          {role === 'admin' ? 'Admin' : 'Staff'}
+          {role === 'admin' ? 'Admin' : 'Site Engineer'}
         </span>
       </div>
       <p className="text-[10px] text-gray-400 truncate">{email}</p>
@@ -66,7 +66,7 @@ function UserBadge({ email, role }: { email: string; role: 'admin' | 'staff' }) 
   )
 }
 
-export function Navbar({ userEmail, role }: { userEmail: string; role: 'admin' | 'staff' }) {
+export function Navbar({ userEmail, role }: { userEmail: string; role: 'admin' | 'site_engineer' }) {
   const path = usePathname()
   const [isPending, startTransition] = useTransition()
   const [drawerOpen, setDrawerOpen] = useState(false)

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { createAuthClient, getUserRole } from '@/lib/supabase-server'
+import { createAuthClient, getUserRole, getCurrentUser } from '@/lib/supabase-server'
 
 function getAdminClient() {
   return createClient(
@@ -20,7 +20,7 @@ async function requireRole(...allowed: string[]) {
 export async function updateStageDate(
   projectId: string, stageName: string, date: string | null, notes?: string | null, paymentDate?: string | null
 ) {
-  await requireRole('admin', 'staff', 'coordinator')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   await sb.from('project_stages').upsert(
     { project_id: projectId, stage_name: stageName, completed_date: date ?? null, notes: notes ?? null, payment_date: paymentDate ?? null },
@@ -70,7 +70,7 @@ export async function signIn(formData: FormData): Promise<{ error?: string }> {
 
   const sb = getAdminClient()
   const { data: profile } = await sb.from('profiles').select('role').eq('id', data.user.id).single()
-  const role = (profile?.role as string) ?? 'staff'
+  const role = (profile?.role as string) ?? 'client'
 
   const cookieStore = await cookies()
   const cookieOpts = {
@@ -82,7 +82,8 @@ export async function signIn(formData: FormData): Promise<{ error?: string }> {
   cookieStore.set('sf_login_at', Date.now().toString(), { ...cookieOpts, maxAge: 60 * 60 * 24 })
   cookieStore.set('sf_role', role, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 })
 
-  if (role === 'viewer') redirect('/viewer')
+  if (role === 'client') redirect('/client')
+  if (role === 'site_engineer') redirect('/engineer')
   if (role === 'coordinator') redirect('/coordinator')
   redirect('/')
 }
@@ -103,15 +104,15 @@ export async function createProject(data: {
   location: string | null
   mob_date: string | null
   floors?: string | null
+  plot_size?: string | null
   status?: string
   notes?: string | null
   client_phone?: string | null
   engineer_name?: string | null
   engineer_phone?: string | null
-  project_manager?: string | null
   maps_link?: string | null
 }) {
-  await requireRole('admin', 'staff')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   const { data: project, error } = await sb
     .from('projects')
@@ -120,6 +121,20 @@ export async function createProject(data: {
     .single()
 
   if (error) throw error
+
+  // If a coordinator created the project, auto-assign them
+  const creatorRole = await getUserRole()
+  if (creatorRole === 'coordinator') {
+    const creator = await getCurrentUser()
+    if (creator) {
+      await sb.from('coordinator_projects').insert({
+        user_id: creator.id,
+        project_id: project.id,
+        assigned_at: new Date().toISOString(),
+      })
+    }
+  }
+
   revalidatePath('/projects')
   return project.id as string
 }
@@ -127,7 +142,7 @@ export async function createProject(data: {
 export async function upsertProjectStageOverride(
   projectId: string, stageName: string, targetDays: number, bufferDays: number
 ) {
-  await requireRole('admin', 'staff')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   await sb.from('project_stage_overrides').upsert(
     { project_id: projectId, stage_name: stageName, target_days: targetDays, buffer_days: bufferDays },
@@ -137,7 +152,7 @@ export async function upsertProjectStageOverride(
 }
 
 export async function deleteProjectStageOverride(projectId: string, stageName: string) {
-  await requireRole('admin', 'staff')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   await sb.from('project_stage_overrides')
     .delete()
@@ -154,7 +169,7 @@ export async function deleteProject(id: string) {
   redirect('/projects')
 }
 
-export async function updateUserRole(userId: string, role: 'admin' | 'staff' | 'coordinator' | 'viewer') {
+export async function updateUserRole(userId: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'client') {
   await requireRole('admin')
   const sb = getAdminClient()
   await sb.from('profiles').update({ role }).eq('id', userId)
@@ -186,7 +201,7 @@ export async function deleteUser(userId: string): Promise<{ error?: string }> {
 }
 
 export async function createUser(
-  email: string, password: string, role: 'admin' | 'staff' | 'coordinator' | 'viewer'
+  email: string, password: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'client'
 ): Promise<{ error?: string }> {
   await requireRole('admin')
   const sb = getAdminClient()
@@ -202,7 +217,7 @@ export async function createUser(
 }
 
 export async function assignClientProject(userId: string, projectId: string): Promise<{ error?: string }> {
-  await requireRole('admin')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   const { error: delError } = await sb.from('client_projects').delete().eq('user_id', userId)
   if (delError) return { error: `Delete failed: ${delError.message}` }
@@ -212,19 +227,25 @@ export async function assignClientProject(userId: string, projectId: string): Pr
     .select()
   if (insError) return { error: `Insert failed: ${insError.message}` }
   if (!inserted || inserted.length === 0) return { error: 'Nothing saved — check DB constraints or RLS' }
+  revalidatePath(`/projects/${projectId}`)
   return {}
 }
 
-export async function removeClientProject(userId: string) {
-  await requireRole('admin')
+export async function removeClientProject(userId: string, projectId?: string) {
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   await sb.from('client_projects').delete().eq('user_id', userId)
+  if (projectId) revalidatePath(`/projects/${projectId}`)
 }
 
 export async function assignCoordinatorProject(userId: string, projectId: string): Promise<{ error?: string }> {
   await requireRole('admin')
   const sb = getAdminClient()
-  const { error } = await sb.from('coordinator_projects').insert({ user_id: userId, project_id: projectId })
+  const { error } = await sb.from('coordinator_projects').insert({
+    user_id: userId,
+    project_id: projectId,
+    assigned_at: new Date().toISOString(),
+  })
   if (error) return { error: error.message }
   return {}
 }
@@ -232,7 +253,60 @@ export async function assignCoordinatorProject(userId: string, projectId: string
 export async function removeCoordinatorProject(userId: string, projectId: string): Promise<{ error?: string }> {
   await requireRole('admin')
   const sb = getAdminClient()
-  await sb.from('coordinator_projects').delete().eq('user_id', userId).eq('project_id', projectId)
+  await sb.from('coordinator_projects')
+    .update({ removed_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('project_id', projectId)
+    .is('removed_at', null)
+  return {}
+}
+
+export async function upsertPlotSizeTarget(
+  plotSize: string, stageName: string, targetDays: number, bufferDays: number
+): Promise<{ error?: string }> {
+  await requireRole('admin')
+  const sb = getAdminClient()
+  const { error } = await sb.from('plot_size_stage_targets').upsert(
+    { plot_size: plotSize, stage_name: stageName, target_days: targetDays, buffer_days: bufferDays },
+    { onConflict: 'plot_size,stage_name' }
+  )
+  if (error) return { error: error.message }
+  revalidatePath('/settings')
+  return {}
+}
+
+export async function assignSiteEngineerProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  await requireRole('admin', 'coordinator')
+  const sb = getAdminClient()
+  const { error } = await sb.from('site_engineer_projects').insert({
+    user_id: userId,
+    project_id: projectId,
+    assigned_at: new Date().toISOString(),
+  })
+  if (error) return { error: error.message }
+  return {}
+}
+
+export async function removeSiteEngineerProject(userId: string, projectId: string): Promise<{ error?: string }> {
+  await requireRole('admin', 'coordinator')
+  const sb = getAdminClient()
+  await sb.from('site_engineer_projects')
+    .update({ removed_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('project_id', projectId)
+    .is('removed_at', null)
+  return {}
+}
+
+export async function createUserAsCoordinator(
+  email: string, password: string, role: 'site_engineer' | 'client'
+): Promise<{ error?: string }> {
+  await requireRole('admin', 'coordinator')
+  const sb = getAdminClient()
+  const { data, error } = await sb.auth.admin.createUser({ email, password, email_confirm: true })
+  if (error) return { error: error.message }
+  await sb.from('profiles').insert({ id: data.user.id, name: email, role })
+  revalidatePath('/coordinator/team')
   return {}
 }
 
@@ -241,15 +315,15 @@ export async function updateProject(id: string, data: {
   location: string | null
   mob_date: string | null
   floors: string | null
+  plot_size: string | null
   status: string
   notes: string | null
   client_phone: string | null
   engineer_name: string | null
   engineer_phone: string | null
-  project_manager: string | null
   maps_link: string | null
 }) {
-  await requireRole('admin', 'staff', 'coordinator')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   await sb.from('projects').update(data).eq('id', id)
   revalidatePath(`/projects/${id}`)

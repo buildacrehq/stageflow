@@ -38,6 +38,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
     Object.fromEntries(stages.map(s => [s.stage_name, s.completed_date ?? '']))
   )
   const [noteError, setNoteError] = useState<string | null>(null)
+  const [paymentEditing, setPaymentEditing] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -147,11 +148,39 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                     </label>
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className="text-gray-500 text-xs">
-                      {savedPayment
-                        ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                        : <span className="text-gray-300">—</span>}
-                    </span>
+                    {paymentEditing === t.stage_name ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="date"
+                          autoFocus
+                          value={paymentValues[t.stage_name] ?? ''}
+                          onChange={e => setPaymentValues(prev => ({ ...prev, [t.stage_name]: e.target.value }))}
+                          className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
+                        />
+                        <button
+                          disabled={isPending}
+                          onClick={() => {
+                            const payment = paymentValues[t.stage_name]?.trim() || null
+                            startTransition(async () => {
+                              await updateStageDate(projectId, t.stage_name, stageMap[t.stage_name]?.completed_date ?? null, null, payment)
+                              setPaymentEditing(null)
+                            })
+                          }}
+                          className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50"
+                        >Save</button>
+                        <button onClick={() => setPaymentEditing(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setPaymentEditing(t.stage_name)}
+                        className="text-left text-gray-700 hover:text-green-700 transition-colors"
+                      >
+                        {savedPayment
+                          ? new Date(savedPayment).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : <span className="text-gray-300 italic text-xs">Click to add date</span>
+                        }
+                      </button>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-center text-gray-600">
                     {s?.days_from_mob != null ? `${s.days_from_mob}d` : '—'}

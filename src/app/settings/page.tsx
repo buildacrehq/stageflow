@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { TargetsEditor } from '@/components/ui/TargetsEditor'
+import { PlotSizeTargetsEditor } from '@/components/ui/PlotSizeTargetsEditor'
 import { UsersManager } from '@/components/ui/UsersManager'
 import { getUserRole, getCurrentUser } from '@/lib/supabase-server'
 import { AddUserForm } from '@/components/ui/AddUserForm'
@@ -20,16 +21,18 @@ export default async function SettingsPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  const [targetsRes, usersRes, clientProjectsRes, coordinatorProjectsRes, projectsRes] = await Promise.all([
+  const [targetsRes, usersRes, clientProjectsRes, coordinatorProjectsRes, projectsRes, plotSizeTargetsRes] = await Promise.all([
     supabase.from('stage_targets').select('*').order('sort_order'),
     sb.from('profiles').select('id, name, role').order('created_at'),
     sb.from('client_projects').select('user_id, project_id'),
-    sb.from('coordinator_projects').select('user_id, project_id'),
+    sb.from('coordinator_projects').select('user_id, project_id').is('removed_at', null),
     supabase.from('projects').select('id, client_name').order('client_name'),
+    sb.from('plot_size_stage_targets').select('*'),
   ])
 
   const targets = (targetsRes.data ?? []) as StageTarget[]
   const projects = (projectsRes.data ?? []) as { id: string; client_name: string }[]
+  const plotSizeTargets = plotSizeTargetsRes.data ?? []
 
   const clientProjectMap = Object.fromEntries(
     (clientProjectsRes.data ?? []).map(r => [r.user_id, r.project_id])
@@ -44,7 +47,7 @@ export default async function SettingsPage() {
   const users = (usersRes.data ?? []).map(u => ({
     id: u.id,
     email: u.name as string,
-    role: u.role as 'admin' | 'staff' | 'coordinator' | 'viewer',
+    role: u.role as 'admin' | 'coordinator' | 'site_engineer' | 'client',
     projectId: clientProjectMap[u.id] ?? null,
     coordinatorProjectIds: coordinatorProjectMap[u.id] ?? [],
   }))
@@ -68,10 +71,20 @@ export default async function SettingsPage() {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Plot Size Stage Targets</p>
+            <p className="text-xs text-gray-400 mt-0.5">Set target days per stage for each plot size. Falls back to global defaults if not set.</p>
+          </div>
+        </div>
+        <PlotSizeTargetsEditor globalTargets={targets} plotSizeTargets={plotSizeTargets} />
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
           <p className="text-sm font-medium text-gray-700">Users</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            Admin · Staff · Coordinator · Viewer — set roles and assign projects. Staff cannot access Settings.
+            Admin · Coordinator · Site Engineer · Client — set roles and assign projects.
           </p>
         </div>
         {users.length === 0 ? (

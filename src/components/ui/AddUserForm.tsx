@@ -6,7 +6,7 @@ export function AddUserForm() {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'admin' | 'staff' | 'coordinator' | 'viewer'>('staff')
+  const [role, setRole] = useState<'admin' | 'coordinator' | 'site_engineer' | 'client'>('coordinator')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -22,7 +22,7 @@ export function AddUserForm() {
         setSuccess(true)
         setEmail('')
         setPassword('')
-        setRole('staff')
+        setRole('coordinator')
         setTimeout(() => { setSuccess(false); setOpen(false) }, 1500)
       }
     })
@@ -65,13 +65,13 @@ export function AddUserForm() {
           />
           <select
             value={role}
-            onChange={e => setRole(e.target.value as 'admin' | 'staff' | 'coordinator' | 'viewer')}
+            onChange={e => setRole(e.target.value as 'admin' | 'coordinator' | 'site_engineer' | 'client')}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-600"
           >
             <option value="admin">Admin</option>
-            <option value="staff">Staff</option>
             <option value="coordinator">Coordinator</option>
-            <option value="viewer">Viewer</option>
+            <option value="site_engineer">Site Engineer</option>
+            <option value="client">Client</option>
           </select>
         </div>
 

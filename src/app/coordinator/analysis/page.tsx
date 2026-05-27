@@ -18,7 +18,7 @@ export default async function CoordinatorAnalysisPage() {
   )
 
   const { data: assignments } = await sb
-    .from('coordinator_projects').select('project_id').eq('user_id', user.id)
+    .from('coordinator_projects').select('project_id').eq('user_id', user.id).is('removed_at', null)
   const projectIds = (assignments ?? []).map(a => a.project_id)
 
   if (projectIds.length === 0) {

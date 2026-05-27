@@ -18,7 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const role = user ? await getUserRole() : null
 
   let clientProjectName: string | undefined
-  if (role === 'viewer' && user) {
+  if (role === 'client' && user) {
     const sb = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -35,14 +35,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className="h-full">
       <body className="min-h-full bg-gray-50">
-        {user && role === 'viewer' && (
+        {user && role === 'client' && (
           <ClientNavbar userEmail={user.email ?? ''} projectName={clientProjectName} />
         )}
         {user && role === 'coordinator' && (
           <CoordinatorNavbar userEmail={user.email ?? ''} />
         )}
-        {user && role !== 'viewer' && role !== 'coordinator' && (
-          <Navbar userEmail={user.email ?? ''} role={role ?? 'staff'} />
+        {user && role !== 'client' && role !== 'coordinator' && role !== 'site_engineer' && (
+          <Navbar userEmail={user.email ?? ''} role={role ?? 'admin'} />
         )}
         <main className={user ? 'md:ml-56 pt-14 md:pt-0 min-h-screen' : 'min-h-screen'}>
           <div className={user ? 'px-4 md:px-6 py-4 md:py-6 max-w-7xl mx-auto' : ''}>

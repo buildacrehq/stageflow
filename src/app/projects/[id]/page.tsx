@@ -5,6 +5,8 @@ import { StageEditor } from '@/components/ui/StageEditor'
 import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
 import { ProjectHeader } from '@/components/ui/ProjectHeader'
 import { ProjectCoordinators } from '@/components/ui/ProjectCoordinators'
+import { ProjectSiteEngineers } from '@/components/ui/ProjectSiteEngineers'
+import { ProjectClientAssignment } from '@/components/ui/ProjectClientAssignment'
 import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
 import type { StageStatusRow, StageTarget } from '@/types'
 
@@ -44,8 +46,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const user = await getCurrentUser()
   const role = await getUserRole()
 
-  // Viewers: only allow access to their assigned project
-  if (role === 'viewer' && user) {
+  // Clients: only allow access to their assigned project
+  if (role === 'client' && user) {
     const client = sb()
     const { data } = await client
       .from('client_projects')
@@ -55,7 +57,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     if (!data || data.project_id !== id) notFound()
   }
 
-  // Coordinators: verify they are assigned to this project
+  // Coordinators: verify they are actively assigned to this project
   if (role === 'coordinator' && user) {
     const client = sb()
     const { data } = await client
@@ -63,6 +65,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       .select('project_id')
       .eq('user_id', user.id)
       .eq('project_id', id)
+      .is('removed_at', null)
       .maybeSingle()
     if (!data) redirect('/coordinator')
   }
@@ -70,18 +73,73 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { project, stages, targets, stageNotes, stagePayments } = await getData(id)
   if (!project) notFound()
 
-  // Coordinator assignment data — admin/staff only
+  // Coordinator + site engineer assignment data — admin only for coordinators, admin/coordinator for engineers
   let allCoordinators: { id: string; name: string }[] = []
   let assignedCoordinators: { id: string; name: string }[] = []
-  if (role === 'admin' || role === 'staff') {
+  let coordinatorHistory: { name: string; assigned_at: string | null; removed_at: string }[] = []
+  let allEngineers: { id: string; name: string }[] = []
+  let assignedEngineers: { id: string; name: string }[] = []
+  let engineerHistory: { name: string; assigned_at: string | null; removed_at: string }[] = []
+  let allClients: { id: string; name: string }[] = []
+  let assignedClients: { id: string; name: string }[] = []
+
+  if (role === 'admin') {
     const client = sb()
-    const [coordsRes, assignedRes] = await Promise.all([
+    const [coordsRes, assignedCoordsRes, coordHistRes, engRes, assignedEngRes, engHistRes, clientsRes, assignedClientsRes] = await Promise.all([
       client.from('profiles').select('id, name').eq('role', 'coordinator').order('name'),
-      client.from('coordinator_projects').select('user_id').eq('project_id', id),
+      client.from('coordinator_projects').select('user_id').eq('project_id', id).is('removed_at', null),
+      client.from('coordinator_projects').select('user_id, assigned_at, removed_at').eq('project_id', id).not('removed_at', 'is', null).order('removed_at', { ascending: false }),
+      client.from('profiles').select('id, name').eq('role', 'site_engineer').order('name'),
+      client.from('site_engineer_projects').select('user_id').eq('project_id', id).is('removed_at', null),
+      client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id).not('removed_at', 'is', null).order('removed_at', { ascending: false }),
+      client.from('profiles').select('id, name').eq('role', 'client').order('name'),
+      client.from('client_projects').select('user_id').eq('project_id', id),
     ])
     allCoordinators = coordsRes.data ?? []
-    const assignedIds = new Set((assignedRes.data ?? []).map(r => r.user_id))
-    assignedCoordinators = allCoordinators.filter(c => assignedIds.has(c.id))
+    const assignedCoordIds = new Set((assignedCoordsRes.data ?? []).map(r => r.user_id))
+    assignedCoordinators = allCoordinators.filter(c => assignedCoordIds.has(c.id))
+    const pastCoords = coordHistRes.data ?? []
+    if (pastCoords.length > 0) {
+      const ids = [...new Set(pastCoords.map(r => r.user_id))]
+      const { data: pp } = await client.from('profiles').select('id, name').in('id', ids)
+      const nm = Object.fromEntries((pp ?? []).map(p => [p.id, p.name as string]))
+      coordinatorHistory = pastCoords.map(r => ({ name: nm[r.user_id] ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+    }
+    allEngineers = engRes.data ?? []
+    const assignedEngIds = new Set((assignedEngRes.data ?? []).map(r => r.user_id))
+    assignedEngineers = allEngineers.filter(e => assignedEngIds.has(e.id))
+    const pastEngs = engHistRes.data ?? []
+    if (pastEngs.length > 0) {
+      const ids = [...new Set(pastEngs.map(r => r.user_id))]
+      const { data: pp } = await client.from('profiles').select('id, name').in('id', ids)
+      const nm = Object.fromEntries((pp ?? []).map(p => [p.id, p.name as string]))
+      engineerHistory = pastEngs.map(r => ({ name: nm[r.user_id] ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+    }
+    allClients = clientsRes.data ?? []
+    const assignedClientIds = new Set((assignedClientsRes.data ?? []).map(r => r.user_id))
+    assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
+  } else if (role === 'coordinator') {
+    const client = sb()
+    const [engRes, assignedEngRes, engHistRes, clientsRes, assignedClientsRes] = await Promise.all([
+      client.from('profiles').select('id, name').eq('role', 'site_engineer').order('name'),
+      client.from('site_engineer_projects').select('user_id').eq('project_id', id).is('removed_at', null),
+      client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id).not('removed_at', 'is', null).order('removed_at', { ascending: false }),
+      client.from('profiles').select('id, name').eq('role', 'client').order('name'),
+      client.from('client_projects').select('user_id').eq('project_id', id),
+    ])
+    allEngineers = engRes.data ?? []
+    const assignedEngIds = new Set((assignedEngRes.data ?? []).map(r => r.user_id))
+    assignedEngineers = allEngineers.filter(e => assignedEngIds.has(e.id))
+    const pastEngs = engHistRes.data ?? []
+    if (pastEngs.length > 0) {
+      const ids = [...new Set(pastEngs.map(r => r.user_id))]
+      const { data: pp } = await client.from('profiles').select('id, name').in('id', ids)
+      const nm = Object.fromEntries((pp ?? []).map(p => [p.id, p.name as string]))
+      engineerHistory = pastEngs.map(r => ({ name: nm[r.user_id] ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+    }
+    allClients = clientsRes.data ?? []
+    const assignedClientIds = new Set((assignedClientsRes.data ?? []).map(r => r.user_id))
+    assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
   }
 
   const doneStages = stages.filter(s => s.completed_date)
@@ -89,7 +147,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const buffer = doneStages.filter(s => s.stage_status === 'buffer').length
   const delayed = doneStages.filter(s => s.stage_status === 'delayed').length
 
-  const backHref = role === 'coordinator' ? '/coordinator' : '/projects'
+  const backHref = role === 'coordinator' ? '/coordinator/projects' : '/projects'
   const backLabel = role === 'coordinator' ? '← My Projects' : '← Projects'
 
   return (
@@ -104,12 +162,32 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         role={role}
       />
 
-      {/* Coordinator assignment — admin/staff only */}
-      {(role === 'admin' || role === 'staff') && (
+      {/* Coordinator assignment — admin only */}
+      {role === 'admin' && (
         <ProjectCoordinators
           projectId={id}
           allCoordinators={allCoordinators}
           initialAssigned={assignedCoordinators}
+          history={coordinatorHistory}
+        />
+      )}
+
+      {/* Site engineer assignment — admin + coordinator */}
+      {(role === 'admin' || role === 'coordinator') && (
+        <ProjectSiteEngineers
+          projectId={id}
+          allEngineers={allEngineers}
+          initialAssigned={assignedEngineers}
+          history={engineerHistory}
+        />
+      )}
+
+      {/* Client assignment — admin + coordinator */}
+      {(role === 'admin' || role === 'coordinator') && (
+        <ProjectClientAssignment
+          projectId={id}
+          allClients={allClients}
+          initialAssigned={assignedClients}
         />
       )}
 

@@ -1,14 +1,16 @@
 'use client'
 import Link from 'next/link'
-import { Building2, BarChart2, FolderKanban, LineChart, LogOut, Menu, X } from 'lucide-react'
+import { Building2, BarChart2, FolderKanban, LineChart, LogOut, Menu, X, Plus, Users } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useTransition, useState } from 'react'
 import { signOut } from '@/app/actions'
 
 const NAV = [
-  { href: '/coordinator',          label: 'Overview',  icon: BarChart2,    exact: true },
-  { href: '/coordinator/projects', label: 'Projects',  icon: FolderKanban, exact: false },
-  { href: '/coordinator/analysis', label: 'Analysis',  icon: LineChart,    exact: false },
+  { href: '/coordinator',          label: 'Overview',   icon: BarChart2,    exact: true },
+  { href: '/coordinator/projects', label: 'Projects',   icon: FolderKanban, exact: false },
+  { href: '/coordinator/analysis', label: 'Analysis',   icon: LineChart,    exact: false },
+  { href: '/coordinator/team',     label: 'My Team',    icon: Users,        exact: false },
+  { href: '/projects/new',         label: 'New Project', icon: Plus,        exact: true },
 ]
 
 function NavLinks({ path, onNavigate }: { path: string; onNavigate?: () => void }) {

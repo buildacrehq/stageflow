@@ -19,12 +19,12 @@ export function ProjectForm({ project }: { project?: Project }) {
       location: (fd.get('location') as string) || null,
       mob_date: (fd.get('mob_date') as string) || null,
       floors: (fd.get('floors') as string) || null,
+      plot_size: (fd.get('plot_size') as string) || null,
       status: fd.get('status') as string,
       notes: (fd.get('notes') as string) || null,
       client_phone: (fd.get('client_phone') as string) || null,
       engineer_name: (fd.get('engineer_name') as string) || null,
       engineer_phone: (fd.get('engineer_phone') as string) || null,
-      project_manager: (fd.get('project_manager') as string) || null,
       maps_link: showMap ? ((fd.get('maps_link') as string) || null) : null,
     }
 
@@ -67,10 +67,6 @@ export function ProjectForm({ project }: { project?: Project }) {
             <input name="location" defaultValue={project?.location ?? ''} placeholder="e.g. Whitefield, Bangalore" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Project manager</label>
-            <input name="project_manager" defaultValue={project?.project_manager ?? ''} placeholder="e.g. Suresh Kumar" className={inputCls} />
-          </div>
-          <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Site engineer name</label>
             <input name="engineer_name" defaultValue={project?.engineer_name ?? ''} placeholder="e.g. Ramesh Kumar" className={inputCls} />
           </div>
@@ -99,6 +95,18 @@ export function ProjectForm({ project }: { project?: Project }) {
               <option value="G+2">G+2 — 2 upper floors</option>
               <option value="G+3">G+3 — 3 upper floors</option>
               <option value="G+4">G+4 — 4 upper floors</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Plot size</label>
+            <select name="plot_size" defaultValue={project?.plot_size ?? ''} className={inputCls + ' bg-white'}>
+              <option value="">Not set</option>
+              <option value="20x30">20×30</option>
+              <option value="20x40">20×40</option>
+              <option value="30x40">30×40</option>
+              <option value="30x50">30×50</option>
+              <option value="40x40">40×40</option>
+              <option value="40x60">40×60</option>
             </select>
           </div>
         </div>

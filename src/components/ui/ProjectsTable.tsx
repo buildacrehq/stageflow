@@ -7,10 +7,9 @@ import type { ProjectSummary } from '@/types'
 interface Props {
   projects: ProjectSummary[]
   currentStageMap: Record<string, string>
-  projectManagerMap?: Record<string, string | null>
 }
 
-export function ProjectsTable({ projects, currentStageMap, projectManagerMap = {} }: Props) {
+export function ProjectsTable({ projects, currentStageMap }: Props) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
@@ -20,7 +19,6 @@ export function ProjectsTable({ projects, currentStageMap, projectManagerMap = {
       || p.client_name.toLowerCase().includes(q)
       || (p.location ?? '').toLowerCase().includes(q)
       || (currentStageMap[p.id] ?? '').toLowerCase().includes(q)
-      || (projectManagerMap[p.id] ?? '').toLowerCase().includes(q)
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -55,7 +53,6 @@ export function ProjectsTable({ projects, currentStageMap, projectManagerMap = {
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs">Client</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs">Location</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs">Mob Date</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs">Project Manager</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs">Current Stage</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs">On Time %</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs">Max Delay</th>
@@ -66,7 +63,7 @@ export function ProjectsTable({ projects, currentStageMap, projectManagerMap = {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No projects found</td>
+                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">No projects found</td>
                 </tr>
               ) : filtered.map(p => {
                 const onTimePct = p.on_time_pct ?? 0
@@ -83,9 +80,6 @@ export function ProjectsTable({ projects, currentStageMap, projectManagerMap = {
                     <td className="px-4 py-3 text-gray-500 text-xs">{p.location ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {p.mob_date ? new Date(p.mob_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700 text-xs">
-                      {projectManagerMap[p.id] ?? <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       {currentStage

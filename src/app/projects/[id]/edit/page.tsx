@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { ProjectForm } from '@/components/ui/ProjectForm'
 import { ProjectTargetsEditor } from '@/components/ui/ProjectTargetsEditor'
-import { getUserRole } from '@/lib/supabase-server'
+import { getUserRole, getCurrentUser } from '@/lib/supabase-server'
 import Link from 'next/link'
 import type { Project, StageTarget, ProjectStageOverride } from '@/types'
 
@@ -16,6 +16,20 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
+
+  // Coordinators can only edit projects assigned to them
+  if (role === 'coordinator') {
+    const user = await getCurrentUser()
+    if (!user) redirect('/login')
+    const { data } = await sb
+      .from('coordinator_projects')
+      .select('project_id')
+      .eq('user_id', user.id)
+      .eq('project_id', id)
+      .is('removed_at', null)
+      .maybeSingle()
+    if (!data) redirect('/coordinator/projects')
+  }
 
   const [projectRes, targetsRes, overridesRes] = await Promise.all([
     sb.from('projects').select('*').eq('id', id).single(),
@@ -44,8 +58,8 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
         <ProjectForm project={project} />
       </div>
 
-      {/* Stage timeline overrides — admin/staff only */}
-      {(role === 'admin' || role === 'staff') && (
+      {/* Stage timeline overrides — admin + coordinator */}
+      {(role === 'admin' || role === 'coordinator') && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2 mb-0.5">

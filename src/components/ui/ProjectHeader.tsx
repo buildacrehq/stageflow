@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Phone, MapPin, User, HardHat, Briefcase, ExternalLink, CalendarDays, Layers } from 'lucide-react'
+import { Phone, MapPin, User, HardHat, ExternalLink, CalendarDays, Layers } from 'lucide-react'
 import type { Project } from '@/types'
 
 interface Props {
@@ -30,7 +30,7 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
         <Link href={backHref} className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
           {backLabel}
         </Link>
-        {(role === 'admin' || role === 'staff' || role === 'coordinator') && (
+        {(role === 'admin' || role === 'coordinator') && (
           <Link
             href={`/projects/${project.id}/edit`}
             className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-300 hover:bg-white transition-all"
@@ -126,18 +126,6 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
               </div>
             )}
 
-            {/* Project Manager */}
-            {project.project_manager && (
-              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
-                  <Briefcase size={15} className="text-green-600" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Project Manager</p>
-                  <p className="text-sm font-semibold text-gray-800 truncate">{project.project_manager}</p>
-                </div>
-              </div>
-            )}
 
             {/* Location */}
             {project.location && (

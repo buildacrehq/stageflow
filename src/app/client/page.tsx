@@ -11,7 +11,7 @@ export default async function ClientPage() {
   if (!user) redirect('/login')
 
   const role = await getUserRole()
-  if (role !== 'viewer') redirect('/')
+  if (role !== 'client') redirect('/')
 
   const sb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
