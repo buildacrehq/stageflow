@@ -19,12 +19,12 @@ interface Props {
 
 export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props) {
   const [activeSize, setActiveSize] = useState<string>(PLOT_SIZES[0])
-  const [editing, setEditing] = useState<string | null>(null)
-  const [saved, setSaved] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [savedAll, setSavedAll] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [rawInputs, setRawInputs] = useState<Record<string, { target: string; buffer: string }>>({})
+  const [pendingTab, setPendingTab] = useState<string | null>(null)
 
-  // Build a map: plot_size -> stage_name -> { target_days, buffer_days }
   const [overrides, setOverrides] = useState<Record<string, Record<string, { target: number; buffer: number }>>>(() => {
     const map: Record<string, Record<string, { target: number; buffer: number }>> = {}
     for (const r of plotSizeTargets) {
@@ -41,47 +41,66 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
         : (globalTargets.find(t => t.stage_name === stageName)?.buffer_days ?? 7))
   }
 
-  function setVal(plotSize: string, stageName: string, field: 'target' | 'buffer', val: number) {
-    setOverrides(prev => ({
-      ...prev,
-      [plotSize]: {
-        ...(prev[plotSize] ?? {}),
-        [stageName]: {
-          target: field === 'target' ? val : getVal(plotSize, stageName, 'target'),
-          buffer: field === 'buffer' ? val : getVal(plotSize, stageName, 'buffer'),
-        },
-      },
-    }))
+  function openEdit() {
+    const inputs: Record<string, { target: string; buffer: string }> = {}
+    for (const t of globalTargets) {
+      const key = `${activeSize}-${t.stage_name}`
+      inputs[key] = {
+        target: String(getVal(activeSize, t.stage_name, 'target')),
+        buffer: String(getVal(activeSize, t.stage_name, 'buffer')),
+      }
+    }
+    setRawInputs(inputs)
+    setIsEditing(true)
   }
 
-  function openEdit(key: string, stageName: string) {
-    setRawInputs(prev => ({
-      ...prev,
-      [key]: {
-        target: String(getVal(activeSize, stageName, 'target')),
-        buffer: String(getVal(activeSize, stageName, 'buffer')),
-      },
-    }))
-    setEditing(key)
+  function handleCancel() {
+    setIsEditing(false)
+    setRawInputs({})
   }
 
-  function handleSave(stageName: string) {
-    const key = `${activeSize}-${stageName}`
-    const target = parseInt(rawInputs[key]?.target ?? '0', 10) || 0
-    const buffer = parseInt(rawInputs[key]?.buffer ?? '0', 10) || 0
-    setOverrides(prev => ({
-      ...prev,
-      [activeSize]: {
-        ...(prev[activeSize] ?? {}),
-        [stageName]: { target, buffer },
-      },
-    }))
+  function handleSaveAll() {
+    const newSizeOverrides: Record<string, { target: number; buffer: number }> = {
+      ...(overrides[activeSize] ?? {}),
+    }
+    for (const t of globalTargets) {
+      const key = `${activeSize}-${t.stage_name}`
+      const target = parseInt(rawInputs[key]?.target ?? '0', 10) || 0
+      const buffer = parseInt(rawInputs[key]?.buffer ?? '0', 10) || 0
+      newSizeOverrides[t.stage_name] = { target, buffer }
+    }
+    setOverrides(prev => ({ ...prev, [activeSize]: newSizeOverrides }))
     startTransition(async () => {
-      await upsertPlotSizeTarget(activeSize, stageName, target, buffer)
-      setEditing(null)
-      setSaved(`${activeSize}-${stageName}`)
-      setTimeout(() => setSaved(null), 2000)
+      await Promise.all(
+        globalTargets.map(t => {
+          const key = `${activeSize}-${t.stage_name}`
+          const target = parseInt(rawInputs[key]?.target ?? '0', 10) || 0
+          const buffer = parseInt(rawInputs[key]?.buffer ?? '0', 10) || 0
+          return upsertPlotSizeTarget(activeSize, t.stage_name, target, buffer)
+        })
+      )
+      setIsEditing(false)
+      setRawInputs({})
+      setSavedAll(true)
+      setTimeout(() => setSavedAll(false), 2000)
     })
+  }
+
+  function handleTabClick(size: string) {
+    if (isEditing) {
+      setPendingTab(size)
+      return
+    }
+    setActiveSize(size)
+  }
+
+  function confirmTabSwitch() {
+    if (pendingTab) {
+      setActiveSize(pendingTab)
+      setIsEditing(false)
+      setRawInputs({})
+      setPendingTab(null)
+    }
   }
 
   const structure = globalTargets.filter(t => t.category === 'structure')
@@ -100,20 +119,14 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                 <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-400">Stage</th>
                 <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Target (days)</th>
                 <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Buffer (days)</th>
-                <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
               {items.map(t => {
                 const key = `${activeSize}-${t.stage_name}`
-                const isEditing = editing === key
-                const justSaved = saved === key
-
                 return (
-                  <tr key={t.stage_name} className={`border-b border-gray-50 transition-colors ${isEditing ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
-                    <td className="px-5 py-2.5 font-medium text-gray-800">
-                      {t.stage_name}
-                    </td>
+                  <tr key={t.stage_name} className={`border-b border-gray-50 transition-colors ${isEditing ? 'bg-green-50/40' : 'hover:bg-gray-50'}`}>
+                    <td className="px-5 py-2.5 font-medium text-gray-800">{t.stage_name}</td>
                     <td className="px-4 py-2.5 text-center">
                       {isEditing ? (
                         <input
@@ -123,9 +136,7 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                           className="w-20 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                       ) : (
-                        <span className="font-medium text-gray-700">
-                          {getVal(activeSize, t.stage_name, 'target')}d
-                        </span>
+                        <span className="font-medium text-gray-700">{getVal(activeSize, t.stage_name, 'target')}d</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-center">
@@ -140,21 +151,6 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                         <span className="text-gray-500">{getVal(activeSize, t.stage_name, 'buffer')}d</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right">
-                      {isEditing ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <button disabled={isPending} onClick={() => handleSave(t.stage_name)}
-                            className="px-3 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50">
-                            Save
-                          </button>
-                          <button onClick={() => setEditing(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
-                        </div>
-                      ) : justSaved ? (
-                        <span className="text-xs text-green-600 font-medium">Saved ✓</span>
-                      ) : (
-                        <button onClick={() => openEdit(key, t.stage_name)} className="text-xs text-green-700 hover:text-green-900">Edit</button>
-                      )}
-                    </td>
                   </tr>
                 )
               })}
@@ -167,22 +163,63 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
 
   return (
     <div>
-      {/* Plot size tabs */}
-      <div className="flex items-center gap-1 px-5 py-3 border-b border-gray-100 overflow-x-auto">
-        {PLOT_SIZES.map(size => (
-          <button
-            key={size}
-            onClick={() => { setActiveSize(size); setEditing(null); setRawInputs({}) }}
-            className={`text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
-              activeSize === size
-                ? 'bg-green-700 text-white'
-                : 'text-gray-500 hover:bg-gray-100'
-            }`}
-          >
-            {size}
-          </button>
-        ))}
+      {pendingTab && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full mx-4">
+            <p className="text-sm font-medium text-gray-800 mb-1">Unsaved changes</p>
+            <p className="text-xs text-gray-500 mb-4">
+              You have unsaved edits for {activeSize}. Switch to {pendingTab} and discard them?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setPendingTab(null)} className="px-3 py-1.5 text-xs text-gray-600 hover:text-gray-800">
+                Stay
+              </button>
+              <button onClick={confirmTabSwitch} className="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700">
+                Discard &amp; Switch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {PLOT_SIZES.map(size => (
+            <button
+              key={size}
+              onClick={() => handleTabClick(size)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
+                activeSize === size
+                  ? 'bg-green-700 text-white'
+                  : 'text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 ml-4 shrink-0">
+          {isEditing ? (
+            <>
+              <button onClick={handleCancel} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+              <button
+                disabled={isPending}
+                onClick={handleSaveAll}
+                className="px-3 py-1.5 bg-green-700 text-white text-xs rounded-lg hover:bg-green-800 disabled:opacity-50"
+              >
+                {isPending ? 'Saving…' : 'Save All'}
+              </button>
+            </>
+          ) : savedAll ? (
+            <span className="text-xs text-green-600 font-medium">Saved ✓</span>
+          ) : (
+            <button onClick={openEdit} className="px-3 py-1.5 border border-green-700 text-green-700 text-xs rounded-lg hover:bg-green-50">
+              Edit
+            </button>
+          )}
+        </div>
       </div>
+
       {renderSection('Structure Stages', structure)}
       {renderSection('Finishing Stages', finishing)}
     </div>
