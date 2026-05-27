@@ -4,9 +4,7 @@ import { ProjectGantt } from '@/components/charts/ProjectGantt'
 import { StageEditor } from '@/components/ui/StageEditor'
 import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
 import { ProjectHeader } from '@/components/ui/ProjectHeader'
-import { ProjectCoordinators } from '@/components/ui/ProjectCoordinators'
-import { ProjectSiteEngineers } from '@/components/ui/ProjectSiteEngineers'
-import { ProjectClientAssignment } from '@/components/ui/ProjectClientAssignment'
+import { ProjectTeamPanel } from '@/components/ui/ProjectTeamPanel'
 import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
 import type { StageStatusRow, StageTarget } from '@/types'
 
@@ -159,32 +157,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         role={role}
       />
 
-      {/* Coordinator assignment — admin only */}
-      {role === 'admin' && (
-        <ProjectCoordinators
+      {(role === 'admin' || role === 'coordinator') && (
+        <ProjectTeamPanel
           projectId={id}
+          showCoordinators={role === 'admin'}
           allCoordinators={allCoordinators}
-          initialAssigned={assignedCoordinators}
-          history={coordinatorHistory}
-        />
-      )}
-
-      {/* Site engineer assignment — admin + coordinator */}
-      {(role === 'admin' || role === 'coordinator') && (
-        <ProjectSiteEngineers
-          projectId={id}
+          initialCoordinators={assignedCoordinators}
+          coordinatorHistory={coordinatorHistory}
           allEngineers={allEngineers}
-          initialAssigned={assignedEngineers}
-          history={engineerHistory}
-        />
-      )}
-
-      {/* Client assignment — admin + coordinator */}
-      {(role === 'admin' || role === 'coordinator') && (
-        <ProjectClientAssignment
-          projectId={id}
+          initialEngineers={assignedEngineers}
+          engineerHistory={engineerHistory}
           allClients={allClients}
-          initialAssigned={assignedClients}
+          initialClients={assignedClients}
         />
       )}
 
