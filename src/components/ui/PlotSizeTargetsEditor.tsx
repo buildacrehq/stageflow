@@ -1,6 +1,6 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { upsertPlotSizeTarget } from '@/app/actions'
+import { upsertAllPlotSizeTargets } from '@/app/actions'
 import type { StageTarget } from '@/types'
 
 const PLOT_SIZES = ['20x30', '20x40', '30x40', '30x50', '40x40', '40x60'] as const
@@ -71,12 +71,15 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
     }
     setOverrides(prev => ({ ...prev, [activeSize]: newSizeOverrides }))
     startTransition(async () => {
-      await Promise.all(
+      await upsertAllPlotSizeTargets(
+        activeSize,
         globalTargets.map(t => {
           const key = `${activeSize}-${t.stage_name}`
-          const target = parseInt(rawInputs[key]?.target ?? '0', 10) || 0
-          const buffer = parseInt(rawInputs[key]?.buffer ?? '0', 10) || 0
-          return upsertPlotSizeTarget(activeSize, t.stage_name, target, buffer)
+          return {
+            stageName: t.stage_name,
+            targetDays: parseInt(rawInputs[key]?.target ?? '0', 10) || 0,
+            bufferDays: parseInt(rawInputs[key]?.buffer ?? '0', 10) || 0,
+          }
         })
       )
       setIsEditing(false)

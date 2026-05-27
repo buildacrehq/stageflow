@@ -41,14 +41,22 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
   const [paymentEditing, setPaymentEditing] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // Optimistic local copies — update immediately on user action, sync from server after revalidation
+  const [localStages, setLocalStages] = useState<StageStatusRow[]>(stages)
+  const [localNotes, setLocalNotes] = useState<Record<string, string | null>>(stageNotes)
+  const [localPayments, setLocalPayments] = useState<Record<string, string | null>>(stagePayments)
+
+  useEffect(() => { setLocalStages(stages) }, [stages])
   useEffect(() => {
+    setLocalNotes(stageNotes)
     setNoteValues(Object.fromEntries(Object.entries(stageNotes).map(([k, v]) => [k, v ?? ''])))
   }, [stageNotes])
   useEffect(() => {
+    setLocalPayments(stagePayments)
     setPaymentValues(Object.fromEntries(Object.entries(stagePayments).map(([k, v]) => [k, v ?? ''])))
   }, [stagePayments])
 
-  const stageMap = Object.fromEntries(stages.map(s => [s.stage_name, s]))
+  const stageMap = Object.fromEntries(localStages.map(s => [s.stage_name, s]))
   const allowedStructure = new Set(visibleStructureStages(floors))
   const visibleTargets = targets.filter(t =>
     t.category === 'finishing' || allowedStructure.has(t.stage_name)
@@ -81,15 +89,25 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
     }
     setNoteError(null)
     const payment = paymentValues[stageName]?.trim() || null
+
+    // Optimistic: update UI immediately, don't wait for server
+    setEditing(null)
+    setLocalStages(prev => prev.map(s => s.stage_name === stageName ? { ...s, completed_date: date || null } : s))
+    setLocalNotes(prev => ({ ...prev, [stageName]: note }))
+    setLocalPayments(prev => ({ ...prev, [stageName]: payment }))
+
     startTransition(async () => {
       await updateStageDate(projectId, stageName, date || null, note, payment)
-      setEditing(null)
     })
   }
 
   function handleFinishingToggle(stageName: string, checked: boolean) {
     const today = new Date().toISOString().split('T')[0]
     const date = checked ? today : null
+
+    // Optimistic: flip the checkbox immediately
+    setLocalStages(prev => prev.map(s => s.stage_name === stageName ? { ...s, completed_date: date } : s))
+
     startTransition(async () => {
       await updateStageDate(projectId, stageName, date, null, null)
     })
@@ -102,8 +120,8 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             const s = stageMap[t.stage_name]
             const isEditing = editing === t.stage_name
             const currentDate = s?.completed_date ?? ''
-            const savedNote = stageNotes[t.stage_name]
-            const savedPayment = stagePayments[t.stage_name]
+            const savedNote = localNotes[t.stage_name]
+            const savedPayment = localPayments[t.stage_name]
 
             // ── Finishing stage: checkbox only ────────────────────────
             if (t.category === 'finishing') {
@@ -148,9 +166,10 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                           disabled={isPending}
                           onClick={() => {
                             const payment = paymentValues[t.stage_name]?.trim() || null
+                            setPaymentEditing(null)
+                            setLocalPayments(prev => ({ ...prev, [t.stage_name]: payment }))
                             startTransition(async () => {
                               await updateStageDate(projectId, t.stage_name, stageMap[t.stage_name]?.completed_date ?? null, null, payment)
-                              setPaymentEditing(null)
                             })
                           }}
                           className="px-2 py-1 bg-green-700 text-white text-xs rounded hover:bg-green-800 disabled:opacity-50"

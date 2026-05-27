@@ -50,11 +50,11 @@ export async function updateStageTargetDuration(
     buffer_days: t.stage_name === stageName ? bufferDays : t.buffer_days,
   }))
 
-  for (const u of updates) {
-    await sb.from('stage_targets')
+  await Promise.all(updates.map(u =>
+    sb.from('stage_targets')
       .update({ target_days: u.target_days, buffer_days: u.buffer_days })
       .eq('stage_name', u.stage_name)
-  }
+  ))
 
   revalidatePath('/settings')
 }
@@ -258,6 +258,26 @@ export async function removeCoordinatorProject(userId: string, projectId: string
     .eq('user_id', userId)
     .eq('project_id', projectId)
     .is('removed_at', null)
+  return {}
+}
+
+export async function upsertAllPlotSizeTargets(
+  plotSize: string,
+  items: { stageName: string; targetDays: number; bufferDays: number }[]
+): Promise<{ error?: string }> {
+  await requireRole('admin')
+  const sb = getAdminClient()
+  const { error } = await sb.from('plot_size_stage_targets').upsert(
+    items.map(i => ({
+      plot_size: plotSize,
+      stage_name: i.stageName,
+      target_days: i.targetDays,
+      buffer_days: i.bufferDays,
+    })),
+    { onConflict: 'plot_size,stage_name' }
+  )
+  if (error) return { error: error.message }
+  revalidatePath('/settings')
   return {}
 }
 
