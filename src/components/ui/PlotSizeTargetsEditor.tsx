@@ -43,7 +43,7 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
 
   function openEdit() {
     const inputs: Record<string, { target: string; buffer: string }> = {}
-    for (const t of globalTargets) {
+    for (const t of structure) {
       const key = `${activeSize}-${t.stage_name}`
       inputs[key] = {
         target: String(getVal(activeSize, t.stage_name, 'target')),
@@ -63,7 +63,7 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
     const newSizeOverrides: Record<string, { target: number; buffer: number }> = {
       ...(overrides[activeSize] ?? {}),
     }
-    for (const t of globalTargets) {
+    for (const t of structure) {
       const key = `${activeSize}-${t.stage_name}`
       const target = parseInt(rawInputs[key]?.target ?? '0', 10) || 0
       const buffer = parseInt(rawInputs[key]?.buffer ?? '0', 10) || 0
@@ -73,7 +73,7 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
     startTransition(async () => {
       await upsertAllPlotSizeTargets(
         activeSize,
-        globalTargets.map(t => {
+        structure.map(t => {
           const key = `${activeSize}-${t.stage_name}`
           return {
             stageName: t.stage_name,
@@ -224,7 +224,6 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
       </div>
 
       {renderSection('Structure Stages', structure)}
-      {renderSection('Finishing Stages', finishing)}
     </div>
   )
 }
