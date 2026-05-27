@@ -3,6 +3,7 @@ import { useState, useTransition, useEffect } from 'react'
 import { StatusBadge } from './StatusBadge'
 import { updateStageDate } from '@/app/actions'
 import { visibleStructureStages } from '@/lib/constants'
+import { useBeforeUnload } from '@/lib/hooks'
 import type { StageStatusRow, StageTarget } from '@/types'
 
 const DELAY_REASONS = [
@@ -41,6 +42,8 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
   const [noteError, setNoteError] = useState<string | null>(null)
   const [paymentEditing, setPaymentEditing] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  useBeforeUnload(!readOnly && (editing !== null || paymentEditing !== null))
 
   // Optimistic local copies — update immediately on user action, sync from server after revalidation
   const [localStages, setLocalStages] = useState<StageStatusRow[]>(stages)

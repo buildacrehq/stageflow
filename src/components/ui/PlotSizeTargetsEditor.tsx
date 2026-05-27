@@ -1,6 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { upsertAllPlotSizeTargets } from '@/app/actions'
+import { useBeforeUnload } from '@/lib/hooks'
 import type { StageTarget } from '@/types'
 
 const PLOT_SIZES = ['20x30', '20x40', '30x40', '30x50', '40x40', '40x60'] as const
@@ -24,6 +25,8 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
   const [isPending, startTransition] = useTransition()
   const [rawInputs, setRawInputs] = useState<Record<string, { target: string; buffer: string }>>({})
   const [pendingTab, setPendingTab] = useState<string | null>(null)
+
+  useBeforeUnload(isEditing)
 
   const [overrides, setOverrides] = useState<Record<string, Record<string, { target: number; buffer: number }>>>(() => {
     const map: Record<string, Record<string, { target: number; buffer: number }>> = {}

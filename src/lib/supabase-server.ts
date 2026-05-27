@@ -26,8 +26,8 @@ export async function createAuthClient() {
 
 export async function getCurrentUser() {
   const supabase = await createAuthClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  return session?.user ?? null
+  const { data: { user } } = await supabase.auth.getUser()
+  return user ?? null
 }
 
 export async function getUserRole(): Promise<'admin' | 'coordinator' | 'site_engineer' | 'client'> {

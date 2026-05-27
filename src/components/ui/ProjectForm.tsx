@@ -2,6 +2,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createProject, updateProject } from '@/app/actions'
+import { useBeforeUnload } from '@/lib/hooks'
 import type { Project } from '@/types'
 
 interface Engineer { id: string; name: string }
@@ -14,9 +15,13 @@ export function ProjectForm({ project, engineers = [] }: { project?: Project; en
   const [engineerName, setEngineerName] = useState(
     engineers.find(e => e.name === project?.engineer_name)?.name ?? ''
   )
+  const [isDirty, setIsDirty] = useState(false)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  useBeforeUnload(isDirty)
+
+  function handleSubmit(e: { preventDefault(): void; currentTarget: HTMLFormElement }) {
     e.preventDefault()
+    setIsDirty(false)
     setError(null)
     const fd = new FormData(e.currentTarget)
     const data = {
@@ -51,7 +56,7 @@ export function ProjectForm({ project, engineers = [] }: { project?: Project; en
   const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-shadow'
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} onChange={() => setIsDirty(true)} className="space-y-5">
       {error && (
         <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}

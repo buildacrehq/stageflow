@@ -1,6 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { upsertProjectStageOverride, deleteProjectStageOverride } from '@/app/actions'
+import { useBeforeUnload } from '@/lib/hooks'
 import type { StageTarget, ProjectStageOverride } from '@/types'
 
 interface Props {
@@ -46,6 +47,8 @@ export function ProjectTargetsEditor({ projectId, defaults, overrides }: Props) 
   const [editing, setEditing] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState<string | null>(null)
+
+  useBeforeUnload(editing !== null)
   const [customSet, setCustomSet] = useState<Record<string, boolean>>(
     Object.fromEntries(defaults.map(d => [d.stage_name, !!overrideMap[d.stage_name]]))
   )
