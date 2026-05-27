@@ -85,60 +85,57 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   if (role === 'admin') {
     const client = sb()
-    const [coordsRes, assignedCoordsRes, coordHistRes, engRes, assignedEngRes, engHistRes, clientsRes, assignedClientsRes] = await Promise.all([
-      client.from('profiles').select('id, name').eq('role', 'coordinator').order('name'),
-      client.from('coordinator_projects').select('user_id').eq('project_id', id).is('removed_at', null),
-      client.from('coordinator_projects').select('user_id, assigned_at, removed_at').eq('project_id', id).not('removed_at', 'is', null).order('removed_at', { ascending: false }),
-      client.from('profiles').select('id, name').eq('role', 'site_engineer').order('name'),
-      client.from('site_engineer_projects').select('user_id').eq('project_id', id).is('removed_at', null),
-      client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id).not('removed_at', 'is', null).order('removed_at', { ascending: false }),
-      client.from('profiles').select('id, name').eq('role', 'client').order('name'),
+    // 4 parallel queries instead of 10+ sequential batches
+    const [profilesRes, coordAssignRes, engAssignRes, clientAssignRes] = await Promise.all([
+      client.from('profiles').select('id, name, role').order('name'),
+      client.from('coordinator_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
+      client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
       client.from('client_projects').select('user_id').eq('project_id', id),
     ])
-    allCoordinators = coordsRes.data ?? []
-    const assignedCoordIds = new Set((assignedCoordsRes.data ?? []).map(r => r.user_id))
+    const profileMap = Object.fromEntries((profilesRes.data ?? []).map(p => [p.id, p as { id: string; name: string; role: string }]))
+    allCoordinators = (profilesRes.data ?? []).filter(p => p.role === 'coordinator').map(p => ({ id: p.id, name: p.name as string }))
+    allEngineers = (profilesRes.data ?? []).filter(p => p.role === 'site_engineer').map(p => ({ id: p.id, name: p.name as string }))
+    allClients = (profilesRes.data ?? []).filter(p => p.role === 'client').map(p => ({ id: p.id, name: p.name as string }))
+
+    const coordAssignments = coordAssignRes.data ?? []
+    const assignedCoordIds = new Set(coordAssignments.filter(r => !r.removed_at).map(r => r.user_id))
     assignedCoordinators = allCoordinators.filter(c => assignedCoordIds.has(c.id))
-    const pastCoords = coordHistRes.data ?? []
-    if (pastCoords.length > 0) {
-      const ids = [...new Set(pastCoords.map(r => r.user_id))]
-      const { data: pp } = await client.from('profiles').select('id, name').in('id', ids)
-      const nm = Object.fromEntries((pp ?? []).map(p => [p.id, p.name as string]))
-      coordinatorHistory = pastCoords.map(r => ({ name: nm[r.user_id] ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
-    }
-    allEngineers = engRes.data ?? []
-    const assignedEngIds = new Set((assignedEngRes.data ?? []).map(r => r.user_id))
+    coordinatorHistory = coordAssignments
+      .filter(r => r.removed_at)
+      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
+      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+
+    const engAssignments = engAssignRes.data ?? []
+    const assignedEngIds = new Set(engAssignments.filter(r => !r.removed_at).map(r => r.user_id))
     assignedEngineers = allEngineers.filter(e => assignedEngIds.has(e.id))
-    const pastEngs = engHistRes.data ?? []
-    if (pastEngs.length > 0) {
-      const ids = [...new Set(pastEngs.map(r => r.user_id))]
-      const { data: pp } = await client.from('profiles').select('id, name').in('id', ids)
-      const nm = Object.fromEntries((pp ?? []).map(p => [p.id, p.name as string]))
-      engineerHistory = pastEngs.map(r => ({ name: nm[r.user_id] ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
-    }
-    allClients = clientsRes.data ?? []
-    const assignedClientIds = new Set((assignedClientsRes.data ?? []).map(r => r.user_id))
+    engineerHistory = engAssignments
+      .filter(r => r.removed_at)
+      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
+      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+
+    const assignedClientIds = new Set((clientAssignRes.data ?? []).map(r => r.user_id))
     assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
   } else if (role === 'coordinator') {
     const client = sb()
-    const [engRes, assignedEngRes, engHistRes, clientsRes, assignedClientsRes] = await Promise.all([
-      client.from('profiles').select('id, name').eq('role', 'site_engineer').order('name'),
-      client.from('site_engineer_projects').select('user_id').eq('project_id', id).is('removed_at', null),
-      client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id).not('removed_at', 'is', null).order('removed_at', { ascending: false }),
-      client.from('profiles').select('id, name').eq('role', 'client').order('name'),
+    // 3 parallel queries instead of 7
+    const [profilesRes, engAssignRes, clientAssignRes] = await Promise.all([
+      client.from('profiles').select('id, name, role').in('role', ['site_engineer', 'client']).order('name'),
+      client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
       client.from('client_projects').select('user_id').eq('project_id', id),
     ])
-    allEngineers = engRes.data ?? []
-    const assignedEngIds = new Set((assignedEngRes.data ?? []).map(r => r.user_id))
+    const profileMap = Object.fromEntries((profilesRes.data ?? []).map(p => [p.id, p as { id: string; name: string; role: string }]))
+    allEngineers = (profilesRes.data ?? []).filter(p => p.role === 'site_engineer').map(p => ({ id: p.id, name: p.name as string }))
+    allClients = (profilesRes.data ?? []).filter(p => p.role === 'client').map(p => ({ id: p.id, name: p.name as string }))
+
+    const engAssignments = engAssignRes.data ?? []
+    const assignedEngIds = new Set(engAssignments.filter(r => !r.removed_at).map(r => r.user_id))
     assignedEngineers = allEngineers.filter(e => assignedEngIds.has(e.id))
-    const pastEngs = engHistRes.data ?? []
-    if (pastEngs.length > 0) {
-      const ids = [...new Set(pastEngs.map(r => r.user_id))]
-      const { data: pp } = await client.from('profiles').select('id, name').in('id', ids)
-      const nm = Object.fromEntries((pp ?? []).map(p => [p.id, p.name as string]))
-      engineerHistory = pastEngs.map(r => ({ name: nm[r.user_id] ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
-    }
-    allClients = clientsRes.data ?? []
-    const assignedClientIds = new Set((assignedClientsRes.data ?? []).map(r => r.user_id))
+    engineerHistory = engAssignments
+      .filter(r => r.removed_at)
+      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
+      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+
+    const assignedClientIds = new Set((clientAssignRes.data ?? []).map(r => r.user_id))
     assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
   }
 

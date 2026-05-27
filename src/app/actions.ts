@@ -26,7 +26,8 @@ export async function updateStageDate(
     { project_id: projectId, stage_name: stageName, completed_date: date ?? null, notes: notes ?? null, payment_date: paymentDate ?? null },
     { onConflict: 'project_id,stage_name' }
   )
-  revalidatePath(`/projects/${projectId}`)
+  // No revalidatePath: page is force-dynamic (revalidate=0) so next navigation
+  // always fetches fresh data. Optimistic updates handle the current session UI.
 }
 
 export async function updateStageTargetDuration(
