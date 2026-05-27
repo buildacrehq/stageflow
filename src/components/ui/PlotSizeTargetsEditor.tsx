@@ -22,6 +22,7 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
   const [editing, setEditing] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [rawInputs, setRawInputs] = useState<Record<string, { target: string; buffer: string }>>({})
 
   // Build a map: plot_size -> stage_name -> { target_days, buffer_days }
   const [overrides, setOverrides] = useState<Record<string, Record<string, { target: number; buffer: number }>>>(() => {
@@ -53,9 +54,23 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
     }))
   }
 
+  function openEdit(key: string, stageName: string) {
+    setRawInputs(prev => ({
+      ...prev,
+      [key]: {
+        target: String(getVal(activeSize, stageName, 'target')),
+        buffer: String(getVal(activeSize, stageName, 'buffer')),
+      },
+    }))
+    setEditing(key)
+  }
+
   function handleSave(stageName: string) {
-    const target = getVal(activeSize, stageName, 'target')
-    const buffer = getVal(activeSize, stageName, 'buffer')
+    const key = `${activeSize}-${stageName}`
+    const target = parseInt(rawInputs[key]?.target ?? '0', 10) || 0
+    const buffer = parseInt(rawInputs[key]?.buffer ?? '0', 10) || 0
+    setVal(activeSize, stageName, 'target', target)
+    setVal(activeSize, stageName, 'buffer', buffer)
     startTransition(async () => {
       await upsertPlotSizeTarget(activeSize, stageName, target, buffer)
       setEditing(null)
@@ -99,9 +114,9 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                     <td className="px-4 py-2.5 text-center">
                       {isEditing ? (
                         <input
-                          type="number" min={1}
-                          value={getVal(activeSize, t.stage_name, 'target')}
-                          onChange={e => setVal(activeSize, t.stage_name, 'target', +e.target.value)}
+                          type="number"
+                          value={rawInputs[key]?.target ?? ''}
+                          onChange={e => setRawInputs(prev => ({ ...prev, [key]: { ...prev[key], target: e.target.value } }))}
                           className="w-20 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                       ) : (
@@ -113,9 +128,9 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                     <td className="px-4 py-2.5 text-center">
                       {isEditing ? (
                         <input
-                          type="number" min={0}
-                          value={getVal(activeSize, t.stage_name, 'buffer')}
-                          onChange={e => setVal(activeSize, t.stage_name, 'buffer', +e.target.value)}
+                          type="number"
+                          value={rawInputs[key]?.buffer ?? ''}
+                          onChange={e => setRawInputs(prev => ({ ...prev, [key]: { ...prev[key], buffer: e.target.value } }))}
                           className="w-20 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                       ) : (
@@ -134,7 +149,7 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                       ) : justSaved ? (
                         <span className="text-xs text-green-600 font-medium">Saved ✓</span>
                       ) : (
-                        <button onClick={() => setEditing(key)} className="text-xs text-green-700 hover:text-green-900">Edit</button>
+                        <button onClick={() => openEdit(key, t.stage_name)} className="text-xs text-green-700 hover:text-green-900">Edit</button>
                       )}
                     </td>
                   </tr>
@@ -154,7 +169,7 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
         {PLOT_SIZES.map(size => (
           <button
             key={size}
-            onClick={() => { setActiveSize(size); setEditing(null) }}
+            onClick={() => { setActiveSize(size); setEditing(null); setRawInputs({}) }}
             className={`text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
               activeSize === size
                 ? 'bg-green-700 text-white'
