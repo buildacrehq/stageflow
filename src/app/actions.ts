@@ -320,13 +320,13 @@ export async function removeSiteEngineerProject(userId: string, projectId: strin
 }
 
 export async function createUserAsCoordinator(
-  email: string, password: string, role: 'site_engineer' | 'client'
+  email: string, password: string, role: 'site_engineer' | 'client', phone?: string
 ): Promise<{ error?: string }> {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   const { data, error } = await sb.auth.admin.createUser({ email, password, email_confirm: true })
   if (error) return { error: error.message }
-  await sb.from('profiles').insert({ id: data.user.id, name: email, role })
+  await sb.from('profiles').insert({ id: data.user.id, name: email, role, phone: phone || null })
   revalidatePath('/coordinator/team')
   return {}
 }
