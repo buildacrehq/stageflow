@@ -7,7 +7,7 @@ import type { Project } from '@/types'
 
 interface Engineer { id: string; name: string; phone?: string | null }
 
-export function ProjectForm({ project, engineers = [] }: { project?: Project; engineers?: Engineer[] }) {
+export function ProjectForm({ project, engineers = [], managers = [] }: { project?: Project; engineers?: Engineer[]; managers?: Engineer[] }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -16,6 +16,10 @@ export function ProjectForm({ project, engineers = [] }: { project?: Project; en
     engineers.find(e => e.name === project?.engineer_name)?.name ?? ''
   )
   const [engineerPhone, setEngineerPhone] = useState(project?.engineer_phone ?? '')
+  const [managerName, setManagerName] = useState(
+    managers.find(m => m.name === project?.project_manager_name)?.name ?? ''
+  )
+  const [managerPhone, setManagerPhone] = useState(project?.project_manager_phone ?? '')
   const [isDirty, setIsDirty] = useState(false)
 
   useBeforeUnload(isDirty)
@@ -36,6 +40,8 @@ export function ProjectForm({ project, engineers = [] }: { project?: Project; en
       client_phone: (fd.get('client_phone') as string) || null,
       engineer_name: (fd.get('engineer_name') as string) || null,
       engineer_phone: (fd.get('engineer_phone') as string) || null,
+      project_manager_name: (fd.get('project_manager_name') as string) || null,
+      project_manager_phone: (fd.get('project_manager_phone') as string) || null,
       maps_link: showMap ? ((fd.get('maps_link') as string) || null) : null,
     }
 
@@ -111,6 +117,36 @@ export function ProjectForm({ project, engineers = [] }: { project?: Project; en
               maxLength={10}
               value={engineerPhone}
               onChange={e => setEngineerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="e.g. 9876543210"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Project manager</label>
+            <select
+              name="project_manager_name"
+              value={managerName}
+              onChange={e => {
+                setManagerName(e.target.value)
+                const mgr = managers.find(m => m.name === e.target.value)
+                setManagerPhone(mgr?.phone ?? '')
+              }}
+              className={inputCls + ' bg-white'}
+            >
+              <option value="">Not assigned</option>
+              {managers.map(m => (
+                <option key={m.id} value={m.name}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Project manager phone</label>
+            <input
+              name="project_manager_phone"
+              inputMode="numeric"
+              maxLength={10}
+              value={managerPhone}
+              onChange={e => setManagerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder="e.g. 9876543210"
               className={inputCls}
             />

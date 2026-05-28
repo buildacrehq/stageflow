@@ -25,6 +25,8 @@ export interface Project {
   client_phone: string | null
   engineer_name: string | null
   engineer_phone: string | null
+  project_manager_name: string | null
+  project_manager_phone: string | null
   maps_link: string | null
   created_at: string
   updated_at: string

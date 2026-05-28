@@ -112,6 +112,8 @@ export async function createProject(data: {
   client_phone?: string | null
   engineer_name?: string | null
   engineer_phone?: string | null
+  project_manager_name?: string | null
+  project_manager_phone?: string | null
   maps_link?: string | null
 }) {
   await requireRole('admin', 'coordinator')
@@ -366,6 +368,8 @@ export async function updateProject(id: string, data: {
   client_phone: string | null
   engineer_name: string | null
   engineer_phone: string | null
+  project_manager_name: string | null
+  project_manager_phone: string | null
   maps_link: string | null
 }) {
   await requireRole('admin', 'coordinator')
