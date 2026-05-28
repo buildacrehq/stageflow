@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Phone, MapPin, User, HardHat, ExternalLink, CalendarDays, Layers } from 'lucide-react'
+import { Phone, MapPin, User, HardHat, ExternalLink, CalendarDays, Layers, Briefcase } from 'lucide-react'
 import type { Project } from '@/types'
 
 interface Props {
@@ -126,12 +126,31 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
               </div>
             )}
 
+            {/* Project Manager */}
+            {(project.project_manager_name || project.project_manager_phone) && (
+              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <Briefcase size={15} className="text-purple-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Project Manager</p>
+                  <p className="text-sm font-semibold text-gray-800 truncate">{project.project_manager_name ?? 'Project Manager'}</p>
+                  {project.project_manager_phone && (
+                    <a href={`tel:${project.project_manager_phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-0.5">
+                      <Phone size={10} />
+                      {project.project_manager_phone}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
 
             {/* Location */}
             {project.location && (
               <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center shrink-0 mt-0.5">
-                  <MapPin size={15} className="text-purple-600" />
+                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <MapPin size={15} className="text-green-600" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Location</p>

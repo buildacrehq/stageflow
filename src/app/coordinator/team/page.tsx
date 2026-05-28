@@ -24,9 +24,9 @@ export default async function CoordinatorTeamPage() {
     .is('removed_at', null)
   const projectIds = (assignments ?? []).map(a => a.project_id)
 
-  // Get all site engineers and clients — fetch all, coordinator manages their own
-  const [engineersRes, clientsRes, projectsRes] = await Promise.all([
+  const [engineersRes, managersRes, clientsRes, projectsRes] = await Promise.all([
     sb.from('profiles').select('id, name').eq('role', 'site_engineer').order('name'),
+    sb.from('profiles').select('id, name').eq('role', 'project_manager').order('name'),
     sb.from('profiles').select('id, name').eq('role', 'client').order('name'),
     projectIds.length > 0
       ? sb.from('projects').select('id, client_name').in('id', projectIds).order('client_name')
@@ -37,11 +37,12 @@ export default async function CoordinatorTeamPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-gray-900">My Team</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Manage site engineers and clients for your projects</p>
+        <p className="text-sm text-gray-500 mt-0.5">Manage site engineers, project managers and clients for your projects</p>
       </div>
 
       <CoordinatorTeamManager
         engineers={engineersRes.data ?? []}
+        managers={managersRes.data ?? []}
         clients={clientsRes.data ?? []}
         projects={(projectsRes.data ?? []) as { id: string; client_name: string }[]}
       />

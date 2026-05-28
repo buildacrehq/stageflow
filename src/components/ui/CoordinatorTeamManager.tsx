@@ -1,6 +1,6 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { HardHat, User, Plus, X } from 'lucide-react'
+import { HardHat, User, Plus, X, Briefcase } from 'lucide-react'
 import { createUserAsCoordinator, assignSiteEngineerProject, removeSiteEngineerProject, assignClientProject, removeClientProject } from '@/app/actions'
 
 interface Person { id: string; name: string }
@@ -8,15 +8,17 @@ interface Project { id: string; client_name: string }
 
 interface Props {
   engineers: Person[]
+  managers: Person[]
   clients: Person[]
   projects: Project[]
 }
 
-type Tab = 'engineers' | 'clients'
+type Tab = 'engineers' | 'managers' | 'clients'
 
-export function CoordinatorTeamManager({ engineers: initialEngineers, clients: initialClients, projects }: Props) {
+export function CoordinatorTeamManager({ engineers: initialEngineers, managers: initialManagers, clients: initialClients, projects }: Props) {
   const [tab, setTab] = useState<Tab>('engineers')
   const [engineers, setEngineers] = useState(initialEngineers)
+  const [managers, setManagers] = useState(initialManagers)
   const [clients, setClients] = useState(initialClients)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -36,20 +38,21 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, clients: i
   function handleAddUser() {
     if (!newEmail || !newPassword) return
     setError(null)
-    const role = tab === 'engineers' ? 'site_engineer' : 'client'
+    const role = tab === 'engineers' ? 'site_engineer' : tab === 'managers' ? 'project_manager' : 'client'
     startTransition(async () => {
       const res = await createUserAsCoordinator(newEmail, newPassword, role, newPhone || undefined)
       if (res.error) { setError(res.error); return }
       const newPerson = { id: crypto.randomUUID(), name: newEmail }
       if (tab === 'engineers') setEngineers(prev => [...prev, newPerson])
+      else if (tab === 'managers') setManagers(prev => [...prev, newPerson])
       else setClients(prev => [...prev, newPerson])
       setNewEmail(''); setNewPassword(''); setNewPhone('')
       setAddOpen(false)
-      flash(`${role === 'site_engineer' ? 'Site engineer' : 'Client'} created`)
+      flash(`${role === 'site_engineer' ? 'Site engineer' : role === 'project_manager' ? 'Project manager' : 'Client'} created`)
     })
   }
 
-  const people = tab === 'engineers' ? engineers : clients
+  const people = tab === 'engineers' ? engineers : tab === 'managers' ? managers : clients
 
   return (
     <div className="space-y-4">
@@ -61,6 +64,13 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, clients: i
           }`}>
           <HardHat size={14} />Site Engineers
           {engineers.length > 0 && <span className="text-xs px-1.5 py-0.5 bg-gray-700 rounded-full">{engineers.length}</span>}
+        </button>
+        <button onClick={() => { setTab('managers'); setAddOpen(false); setNewPhone('') }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            tab === 'managers' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+          }`}>
+          <Briefcase size={14} />Proj. Managers
+          {managers.length > 0 && <span className="text-xs px-1.5 py-0.5 bg-gray-700 rounded-full">{managers.length}</span>}
         </button>
         <button onClick={() => { setTab('clients'); setAddOpen(false); setNewPhone('') }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -75,7 +85,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, clients: i
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         {people.length === 0 ? (
           <p className="px-5 py-6 text-sm text-gray-400 italic">
-            No {tab === 'engineers' ? 'site engineers' : 'clients'} yet. Add one below.
+            No {tab === 'engineers' ? 'site engineers' : tab === 'managers' ? 'project managers' : 'clients'} yet. Add one below.
           </p>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -83,7 +93,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, clients: i
               <div key={p.id} className="px-5 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center">
-                    {tab === 'engineers' ? <HardHat size={13} className="text-gray-500" /> : <User size={13} className="text-gray-500" />}
+                    {tab === 'engineers' ? <HardHat size={13} className="text-gray-500" /> : tab === 'managers' ? <Briefcase size={13} className="text-gray-500" /> : <User size={13} className="text-gray-500" />}
                   </div>
                   <span className="text-sm text-gray-800">{p.name}</span>
                 </div>
@@ -96,7 +106,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, clients: i
         {addOpen ? (
           <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 space-y-3">
             <p className="text-sm font-medium text-gray-700">
-              Add {tab === 'engineers' ? 'site engineer' : 'client'}
+              Add {tab === 'engineers' ? 'site engineer' : tab === 'managers' ? 'project manager' : 'client'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input type="email" placeholder="Email address" value={newEmail}
@@ -130,7 +140,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, clients: i
             <button onClick={() => setAddOpen(true)}
               className="flex items-center gap-1.5 text-sm text-green-700 hover:text-green-900 font-medium">
               <Plus size={14} />
-              Add {tab === 'engineers' ? 'site engineer' : 'client'}
+              Add {tab === 'engineers' ? 'site engineer' : tab === 'managers' ? 'project manager' : 'client'}
             </button>
           </div>
         )}

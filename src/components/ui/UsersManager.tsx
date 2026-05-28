@@ -5,7 +5,7 @@ import { updateUserRole, assignClientProject, removeClientProject, assignCoordin
 interface UserProfile {
   id: string
   email: string
-  role: 'admin' | 'coordinator' | 'site_engineer' | 'client'
+  role: 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client'
   projectId?: string | null
   coordinatorProjectIds?: string[]
 }
@@ -54,7 +54,7 @@ export function UsersManager({
     setConfirmDelete(null)
   }
 
-  function handleRoleChange(userId: string, newRole: 'admin' | 'coordinator' | 'site_engineer' | 'client') {
+  function handleRoleChange(userId: string, newRole: 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client') {
     setRoles(r => ({ ...r, [userId]: newRole }))
     startTransition(async () => {
       await updateUserRole(userId, newRole)
@@ -125,7 +125,16 @@ export function UsersManager({
     admin: 'bg-green-100 text-green-700',
     coordinator: 'bg-amber-100 text-amber-700',
     site_engineer: 'bg-gray-100 text-gray-600',
+    project_manager: 'bg-purple-100 text-purple-700',
     client: 'bg-blue-100 text-blue-700',
+  }
+
+  const roleLabels: Record<string, string> = {
+    admin: 'Admin',
+    coordinator: 'Coordinator',
+    site_engineer: 'Site Engineer',
+    project_manager: 'Project Manager',
+    client: 'Client',
   }
 
   return (
@@ -149,7 +158,7 @@ export function UsersManager({
               <div className="flex items-center gap-3 shrink-0">
                 {saved === u.id + '_edit' && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${roleColors[currentRole]}`}>
-                  {currentRole === 'site_engineer' ? 'Site Engineer' : currentRole.charAt(0).toUpperCase() + currentRole.slice(1)}
+                  {roleLabels[currentRole] ?? currentRole}
                 </span>
                 {saved === u.id ? (
                   <span className="text-xs text-green-600 font-medium">Saved ✓</span>
@@ -159,12 +168,13 @@ export function UsersManager({
                   <select
                     value={currentRole}
                     disabled={isPending}
-                    onChange={e => handleRoleChange(u.id, e.target.value as 'admin' | 'coordinator' | 'site_engineer' | 'client')}
+                    onChange={e => handleRoleChange(u.id, e.target.value as 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client')}
                     className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:opacity-50"
                   >
                     <option value="admin">Admin</option>
                     <option value="coordinator">Coordinator</option>
                     <option value="site_engineer">Site Engineer</option>
+                    <option value="project_manager">Project Manager</option>
                     <option value="client">Client</option>
                   </select>
                 )}

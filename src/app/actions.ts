@@ -173,7 +173,7 @@ export async function deleteProject(id: string) {
   redirect('/projects')
 }
 
-export async function updateUserRole(userId: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'client') {
+export async function updateUserRole(userId: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client') {
   await requireRole('admin')
   const sb = getAdminClient()
   await sb.from('profiles').update({ role }).eq('id', userId)
