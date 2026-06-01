@@ -50,7 +50,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const users = (usersRes.data ?? []).map(u => ({
     id: u.id,
     email: u.name as string,
-    role: u.role as 'admin' | 'coordinator' | 'site_engineer' | 'client',
+    role: u.role as 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client',
     projectId: clientProjectMap[u.id] ?? null,
     coordinatorProjectIds: coordinatorProjectMap[u.id] ?? [],
   }))
@@ -89,7 +89,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
             <p className="text-sm font-medium text-gray-700">Users</p>
-            <p className="text-xs text-gray-400 mt-0.5">Admin · Coordinator · Site Engineer · Client — set roles and assign projects.</p>
+            <p className="text-xs text-gray-400 mt-0.5">Admin · Coordinator · Site Engineer · Project Manager · Client — set roles and assign projects.</p>
           </div>
           {users.length === 0 ? (
             <p className="px-5 py-4 text-sm text-gray-400">No users found. Add one below.</p>
