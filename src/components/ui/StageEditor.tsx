@@ -26,9 +26,10 @@ interface Props {
   stageNotes: Record<string, string | null>
   stagePayments: Record<string, string | null>
   readOnly?: boolean
+  hidePayments?: boolean
 }
 
-export function StageEditor({ projectId, stages, targets, mobDate, floors, stageNotes, stagePayments, readOnly = false }: Props) {
+export function StageEditor({ projectId, stages, targets, mobDate, floors, stageNotes, stagePayments, readOnly = false, hidePayments = false }: Props) {
   const [editing, setEditing] = useState<string | null>(null)
   const [noteValues, setNoteValues] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(stageNotes).map(([k, v]) => [k, v ?? '']))
@@ -161,7 +162,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                       </label>
                     )}
                   </td>
-                  {!readOnly && (
+                  {!readOnly && !hidePayments && (
                     <td className="px-4 py-2.5">
                       {paymentEditing === t.stage_name ? (
                         <div className="flex items-center gap-1.5">
@@ -283,7 +284,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
                       </button>
                     )}
                   </td>
-                  {!readOnly && (
+                  {!readOnly && !hidePayments && (
                     <td className="px-4 py-2.5">
                       {isEditing ? (
                         <input type="date" value={paymentValues[t.stage_name] ?? ''}
@@ -324,7 +325,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             )
   }
 
-  const COLS = readOnly ? 7 : 8
+  const COLS = readOnly ? 7 : (hidePayments ? 7 : 8)
 
   return (
     <div className="overflow-x-auto">
@@ -334,7 +335,7 @@ export function StageEditor({ projectId, stages, targets, mobDate, floors, stage
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Stage</th>
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Category</th>
             <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Completed Date</th>
-            {!readOnly && <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Payment Date</th>}
+            {!readOnly && !hidePayments && <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Payment Date</th>}
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Days from Mob</th>
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Target</th>
             <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-500">Delay</th>

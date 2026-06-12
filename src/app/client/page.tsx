@@ -97,6 +97,7 @@ export default async function ClientPage() {
           stageNotes={stageNotes}
           stagePayments={stagePayments}
           readOnly
+          hidePayments
         />
       </div>
     </div>

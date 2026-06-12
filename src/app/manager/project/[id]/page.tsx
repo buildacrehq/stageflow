@@ -90,6 +90,7 @@ export default async function ManagerProjectPage({ params }: { params: Promise<{
           stageNotes={stageNotes}
           stagePayments={stagePayments}
           readOnly
+          hidePayments
         />
       </div>
     </div>
