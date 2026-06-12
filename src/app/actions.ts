@@ -17,6 +17,19 @@ async function requireRole(...allowed: string[]) {
   if (!allowed.includes(role)) throw new Error('Unauthorized')
 }
 
+const FIELD_ROLES = ['site_engineer', 'project_manager', 'client'] as const
+
+function generatePassword(): string {
+  const lower = 'abcdefghjkmnpqrstuvwxyz'
+  const upper = 'ABCDEFGHJKMNPQRSTUVWXYZ'
+  const digits = '23456789'
+  let pwd = upper[Math.floor(Math.random() * upper.length)]
+  for (let i = 0; i < 5; i++) pwd += (lower + digits)[Math.floor(Math.random() * (lower.length + digits.length))]
+  pwd += digits[Math.floor(Math.random() * digits.length)]
+  pwd += digits[Math.floor(Math.random() * digits.length)]
+  return pwd
+}
+
 export async function updateStageDate(
   projectId: string, stageName: string, date: string | null, notes?: string | null, paymentDate?: string | null
 ) {
@@ -61,7 +74,8 @@ export async function updateStageTargetDuration(
 }
 
 export async function signIn(formData: FormData): Promise<{ error?: string }> {
-  const email = formData.get('email') as string
+  const raw = (formData.get('email') as string).trim()
+  const email = /^\d{10}$/.test(raw) ? `${raw}@buildacre.in` : raw
   const password = formData.get('password') as string
 
   const supabase = await createAuthClient()
@@ -229,18 +243,27 @@ export async function removeProjectManagerProject(userId: string, projectId: str
 
 export async function createUser(
   email: string, password: string, role: 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client', phone?: string, name?: string
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; generatedPassword?: string }> {
   await requireRole('admin')
   const sb = getAdminClient()
-  const { data, error } = await sb.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  })
+
+  const isField = (FIELD_ROLES as readonly string[]).includes(role)
+  let authEmail = email
+  let authPassword = password
+  let generatedPassword: string | undefined
+
+  if (isField) {
+    if (!phone) return { error: 'Phone number is required for this role' }
+    authEmail = `${phone}@buildacre.in`
+    generatedPassword = generatePassword()
+    authPassword = generatedPassword
+  }
+
+  const { data, error } = await sb.auth.admin.createUser({ email: authEmail, password: authPassword, email_confirm: true })
   if (error) return { error: error.message }
-  await sb.from('profiles').insert({ id: data.user.id, name: name || email, role, phone: phone || null })
+  await sb.from('profiles').upsert({ id: data.user.id, name: name || phone || authEmail, role, phone: phone || null }, { onConflict: 'id' })
   revalidatePath('/settings')
-  return {}
+  return { generatedPassword }
 }
 
 export async function assignClientProject(userId: string, projectId: string): Promise<{ error?: string }> {
@@ -346,14 +369,42 @@ export async function removeSiteEngineerProject(userId: string, projectId: strin
 }
 
 export async function createUserAsCoordinator(
-  email: string, password: string, role: 'site_engineer' | 'project_manager' | 'client', phone?: string, name?: string
+  role: 'site_engineer' | 'project_manager' | 'client', phone: string, name: string
+): Promise<{ error?: string; generatedPassword?: string; userId?: string }> {
+  await requireRole('admin', 'coordinator')
+  if (!phone) return { error: 'Phone number is required' }
+  const sb = getAdminClient()
+  const authEmail = `${phone}@buildacre.in`
+  const generatedPassword = generatePassword()
+  const { data, error } = await sb.auth.admin.createUser({ email: authEmail, password: generatedPassword, email_confirm: true })
+  if (error) return { error: error.message }
+  await sb.from('profiles').upsert({ id: data.user.id, name, role, phone }, { onConflict: 'id' })
+  revalidatePath('/coordinator/team')
+  return { generatedPassword, userId: data.user.id }
+}
+
+export async function updateMemberDetails(
+  userId: string, data: { name?: string; phone?: string; password?: string }
 ): Promise<{ error?: string }> {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
-  const { data, error } = await sb.auth.admin.createUser({ email, password, email_confirm: true })
-  if (error) return { error: error.message }
-  await sb.from('profiles').insert({ id: data.user.id, name: name || email, role, phone: phone || null })
-  revalidatePath('/coordinator/team')
+  const { data: profile } = await sb.from('profiles').select('role').eq('id', userId).single()
+  if (!profile || !(FIELD_ROLES as readonly string[]).includes(profile.role)) return { error: 'Cannot edit this account' }
+
+  const profileUpdates: Record<string, string> = {}
+  if (data.name) profileUpdates.name = data.name
+  if (data.phone) profileUpdates.phone = data.phone
+  if (Object.keys(profileUpdates).length > 0) {
+    await sb.from('profiles').update(profileUpdates).eq('id', userId)
+  }
+
+  const authUpdates: { email?: string; password?: string } = {}
+  if (data.phone) authUpdates.email = `${data.phone}@buildacre.in`
+  if (data.password) authUpdates.password = data.password
+  if (Object.keys(authUpdates).length > 0) {
+    const { error } = await sb.auth.admin.updateUserById(userId, authUpdates)
+    if (error) return { error: error.message }
+  }
   return {}
 }
 

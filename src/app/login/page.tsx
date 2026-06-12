@@ -53,13 +53,13 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">Email</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Email or phone number</label>
               <input
                 name="email"
-                type="email"
+                type="text"
                 required
-                autoComplete="email"
-                placeholder="you@buildacre.in"
+                autoComplete="username"
+                placeholder="Email or 10-digit phone"
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-shadow"
               />
             </div>

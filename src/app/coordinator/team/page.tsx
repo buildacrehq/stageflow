@@ -25,9 +25,9 @@ export default async function CoordinatorTeamPage() {
   const projectIds = (assignments ?? []).map(a => a.project_id)
 
   const [engineersRes, managersRes, clientsRes, projectsRes] = await Promise.all([
-    sb.from('profiles').select('id, name').eq('role', 'site_engineer').order('name'),
-    sb.from('profiles').select('id, name').eq('role', 'project_manager').order('name'),
-    sb.from('profiles').select('id, name').eq('role', 'client').order('name'),
+    sb.from('profiles').select('id, name, phone').eq('role', 'site_engineer').order('name'),
+    sb.from('profiles').select('id, name, phone').eq('role', 'project_manager').order('name'),
+    sb.from('profiles').select('id, name, phone').eq('role', 'client').order('name'),
     projectIds.length > 0
       ? sb.from('projects').select('id, client_name').in('id', projectIds).order('client_name')
       : Promise.resolve({ data: [] }),

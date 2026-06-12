@@ -24,18 +24,25 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  const [targetsRes, usersRes, clientProjectsRes, coordinatorProjectsRes, projectsRes, plotSizeTargetsRes] = await Promise.all([
+  const [targetsRes, usersRes, clientProjectsRes, coordinatorProjectsRes, seProjectsRes, pmProjectsRes, projectsRes, plotSizeTargetsRes, authListRes] = await Promise.all([
     supabase.from('stage_targets').select('*').order('sort_order'),
-    sb.from('profiles').select('id, name, role').order('created_at'),
+    sb.from('profiles').select('id, name, role, phone').order('created_at'),
     sb.from('client_projects').select('user_id, project_id'),
     sb.from('coordinator_projects').select('user_id, project_id').is('removed_at', null),
+    sb.from('site_engineer_projects').select('user_id, project_id').is('removed_at', null),
+    sb.from('project_manager_projects').select('user_id, project_id').is('removed_at', null),
     supabase.from('projects').select('id, client_name').order('client_name'),
     sb.from('plot_size_stage_targets').select('*'),
+    sb.auth.admin.listUsers({ perPage: 1000 }),
   ])
 
   const targets = (targetsRes.data ?? []) as StageTarget[]
   const projects = (projectsRes.data ?? []) as { id: string; client_name: string }[]
   const plotSizeTargets = plotSizeTargetsRes.data ?? []
+
+  const authEmailMap = Object.fromEntries(
+    (authListRes.data?.users ?? []).map(u => [u.id, u.email ?? null])
+  )
 
   const clientProjectMap = Object.fromEntries(
     (clientProjectsRes.data ?? []).map(r => [r.user_id, r.project_id])
@@ -47,12 +54,28 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     coordinatorProjectMap[r.user_id].push(r.project_id)
   }
 
+  const seProjectMap: Record<string, string[]> = {}
+  for (const r of seProjectsRes.data ?? []) {
+    if (!seProjectMap[r.user_id]) seProjectMap[r.user_id] = []
+    seProjectMap[r.user_id].push(r.project_id)
+  }
+
+  const pmProjectMap: Record<string, string[]> = {}
+  for (const r of pmProjectsRes.data ?? []) {
+    if (!pmProjectMap[r.user_id]) pmProjectMap[r.user_id] = []
+    pmProjectMap[r.user_id].push(r.project_id)
+  }
+
   const users = (usersRes.data ?? []).map(u => ({
     id: u.id,
-    email: u.name as string,
+    name: (u.name as string) || '—',
+    phone: (u.phone as string | null) ?? null,
+    authEmail: authEmailMap[u.id] ?? null,
     role: u.role as 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client',
     projectId: clientProjectMap[u.id] ?? null,
     coordinatorProjectIds: coordinatorProjectMap[u.id] ?? [],
+    engineerProjectIds: seProjectMap[u.id] ?? [],
+    managerProjectIds: pmProjectMap[u.id] ?? [],
   }))
 
   const tabCls = (t: string) =>
