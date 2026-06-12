@@ -4,6 +4,7 @@ import { createUser } from '@/app/actions'
 
 export function AddUserForm() {
   const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
@@ -18,11 +19,12 @@ export function AddUserForm() {
     e.preventDefault()
     setError(null)
     startTransition(async () => {
-      const res = await createUser(email, password, role, showPhone ? phone : undefined)
+      const res = await createUser(email, password, role, showPhone ? phone : undefined, name || undefined)
       if (res.error) {
         setError(res.error)
       } else {
         setSuccess(true)
+        setName('')
         setEmail('')
         setPassword('')
         setPhone('')
@@ -49,7 +51,15 @@ export function AddUserForm() {
     <div className="px-5 py-4 border-t border-gray-100 bg-gray-50">
       <p className="text-sm font-medium text-gray-700 mb-3">Add new user</p>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <input
+            type="text"
+            placeholder="Full name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
+          />
           <input
             type="email"
             placeholder="Email address"

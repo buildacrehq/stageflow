@@ -26,6 +26,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
 
   // New user form state
   const [addOpen, setAddOpen] = useState(false)
+  const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newPhone, setNewPhone] = useState('')
@@ -36,17 +37,17 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
   }
 
   function handleAddUser() {
-    if (!newEmail || !newPassword) return
+    if (!newName || !newEmail || !newPassword) return
     setError(null)
     const role = tab === 'engineers' ? 'site_engineer' : tab === 'managers' ? 'project_manager' : 'client'
     startTransition(async () => {
-      const res = await createUserAsCoordinator(newEmail, newPassword, role, newPhone || undefined)
+      const res = await createUserAsCoordinator(newEmail, newPassword, role, newPhone || undefined, newName)
       if (res.error) { setError(res.error); return }
-      const newPerson = { id: crypto.randomUUID(), name: newEmail }
+      const newPerson = { id: crypto.randomUUID(), name: newName }
       if (tab === 'engineers') setEngineers(prev => [...prev, newPerson])
       else if (tab === 'managers') setManagers(prev => [...prev, newPerson])
       else setClients(prev => [...prev, newPerson])
-      setNewEmail(''); setNewPassword(''); setNewPhone('')
+      setNewName(''); setNewEmail(''); setNewPassword(''); setNewPhone('')
       setAddOpen(false)
       flash(`${role === 'site_engineer' ? 'Site engineer' : role === 'project_manager' ? 'Project manager' : 'Client'} created`)
     })
@@ -58,21 +59,21 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
     <div className="space-y-4">
       {/* Tabs */}
       <div className="flex gap-2">
-        <button onClick={() => { setTab('engineers'); setAddOpen(false); setNewPhone('') }}
+        <button onClick={() => { setTab('engineers'); setAddOpen(false); setNewName(''); setNewPhone('') }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             tab === 'engineers' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
           }`}>
           <HardHat size={14} />Site Engineers
           {engineers.length > 0 && <span className="text-xs px-1.5 py-0.5 bg-gray-700 rounded-full">{engineers.length}</span>}
         </button>
-        <button onClick={() => { setTab('managers'); setAddOpen(false); setNewPhone('') }}
+        <button onClick={() => { setTab('managers'); setAddOpen(false); setNewName(''); setNewPhone('') }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             tab === 'managers' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
           }`}>
           <Briefcase size={14} />Proj. Managers
           {managers.length > 0 && <span className="text-xs px-1.5 py-0.5 bg-gray-700 rounded-full">{managers.length}</span>}
         </button>
-        <button onClick={() => { setTab('clients'); setAddOpen(false); setNewPhone('') }}
+        <button onClick={() => { setTab('clients'); setAddOpen(false); setNewName(''); setNewPhone('') }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             tab === 'clients' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
           }`}>
@@ -109,6 +110,9 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
               Add {tab === 'engineers' ? 'site engineer' : tab === 'managers' ? 'project manager' : 'client'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input type="text" placeholder="Full name" value={newName}
+                onChange={e => setNewName(e.target.value)} required
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600" />
               <input type="email" placeholder="Email address" value={newEmail}
                 onChange={e => setNewEmail(e.target.value)}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600" />
@@ -126,7 +130,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
             {error && <p className="text-xs text-red-600">{error}</p>}
             {success && <p className="text-xs text-green-600 font-medium">{success} ✓</p>}
             <div className="flex items-center gap-3">
-              <button onClick={handleAddUser} disabled={isPending || !newEmail || !newPassword}
+              <button onClick={handleAddUser} disabled={isPending || !newName || !newEmail || !newPassword}
                 className="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 disabled:opacity-50">
                 {isPending ? 'Creating…' : 'Create'}
               </button>
