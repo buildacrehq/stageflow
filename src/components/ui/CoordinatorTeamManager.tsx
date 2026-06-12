@@ -27,7 +27,6 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
   const [isPending, startTransition] = useTransition()
   const [addError, setAddError] = useState<string | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
   const [newCredentials, setNewCredentials] = useState<Credentials | null>(null)
 
   // Persist credentials per userId for the lifetime of the page
@@ -41,11 +40,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
 
   // Edit state
   const [editState, setEditState] = useState<EditState | null>(null)
-
-  function flash(msg: string) {
-    setSuccess(msg)
-    setTimeout(() => setSuccess(null), 2500)
-  }
+  const [savedId, setSavedId] = useState<string | null>(null)
 
   function closeAdd() {
     setAddOpen(false); setNewName(''); setNewPhone(''); setNewCredentials(null); setAddError(null)
@@ -116,7 +111,8 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
       }
 
       setEditState(null)
-      flash('Updated')
+      setSavedId(snap.id)
+      setTimeout(() => setSavedId(null), 2500)
     })
   }
 
@@ -176,13 +172,16 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
                         {p.phone && <p className="text-xs text-gray-400">{p.phone}</p>}
                       </div>
                     </div>
-                    <button
-                      onClick={() => { if (isEditing) { setEditState(null); setEditError(null) } else { setEditState({ id: p.id, name: p.name, phone: p.phone ?? '', password: '' }); setEditError(null) } }}
-                      className="text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1"
-                    >
-                      {isEditing ? <X size={13} /> : <Pencil size={13} />}
-                      {isEditing ? 'Cancel' : 'Edit'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {savedId === p.id && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
+                      <button
+                        onClick={() => { if (isEditing) { setEditState(null); setEditError(null) } else { setEditState({ id: p.id, name: p.name, phone: p.phone ?? '', password: '' }); setEditError(null) } }}
+                        className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 border border-gray-200 rounded px-2 py-1 bg-white"
+                      >
+                        {isEditing ? <X size={12} /> : <Pencil size={12} />}
+                        {isEditing ? 'Cancel' : 'Edit'}
+                      </button>
+                    </div>
                   </div>
 
                   {isEditing && (
@@ -226,7 +225,6 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
                           {isPending ? 'Saving…' : 'Save changes'}
                         </button>
                         <button onClick={() => { setEditState(null); setEditError(null) }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
-                        {success && <span className="text-xs text-green-600 font-medium">{success} ✓</span>}
                       </div>
                     </div>
                   )}
