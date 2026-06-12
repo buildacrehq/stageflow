@@ -31,6 +31,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // sf_login_at cookie expires after 24h — if missing, session has aged out
+  const loginAt = request.cookies.get('sf_login_at')?.value
+  if (!loginAt) {
+    const redirect = NextResponse.redirect(new URL('/login', request.url))
+    redirect.cookies.delete('sf_role')
+    return redirect
+  }
+
   const role = request.cookies.get('sf_role')?.value
 
   // Clients can only access /client
