@@ -4,7 +4,7 @@ import { Building2, LogOut } from 'lucide-react'
 import { useTransition } from 'react'
 import { signOut } from '@/app/actions'
 
-export function ClientNavbar({ userEmail, projectName }: { userEmail: string; projectName?: string }) {
+export function ClientNavbar({ userName, projectName }: { userName: string; projectName?: string }) {
   const [isPending, startTransition] = useTransition()
 
   return (
@@ -36,7 +36,7 @@ export function ClientNavbar({ userEmail, projectName }: { userEmail: string; pr
         <div className="px-3 py-3 border-t border-gray-100 space-y-2">
           <div className="px-3 py-2 bg-gray-50 rounded-lg">
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">Client</span>
-            <p className="text-[10px] text-gray-400 truncate mt-0.5">{userEmail}</p>
+            <p className="text-[10px] text-gray-400 truncate mt-0.5">{userName}</p>
           </div>
           <button
             onClick={() => startTransition(async () => { await signOut() })}

@@ -9,7 +9,7 @@ const NAV = [
   { href: '/manager', label: 'My Projects', icon: LayoutDashboard },
 ]
 
-export function ManagerNavbar({ userEmail }: { userEmail: string }) {
+export function ManagerNavbar({ userName }: { userName: string }) {
   const path = usePathname()
   const [isPending, startTransition] = useTransition()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -37,7 +37,7 @@ export function ManagerNavbar({ userEmail }: { userEmail: string }) {
   const UserBadge = () => (
     <div className="px-3 py-2 bg-gray-50 rounded-lg">
       <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">Project Manager</span>
-      <p className="text-[10px] text-gray-400 truncate mt-0.5">{userEmail}</p>
+      <p className="text-[10px] text-gray-400 truncate mt-0.5">{userName}</p>
     </div>
   )
 

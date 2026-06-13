@@ -19,25 +19,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const role = user ? await getUserRole() : null
 
   let clientProjectName: string | undefined
+  let clientUserName: string | undefined
   if (role === 'client' && user) {
     const sb = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
-    const { data } = await sb
-      .from('client_projects')
-      .select('projects(client_name)')
-      .eq('user_id', user.id)
-      .single()
-    const proj = data?.projects as unknown as { client_name: string } | { client_name: string }[] | null
+    const [projectRes, profileRes] = await Promise.all([
+      sb.from('client_projects').select('projects(client_name)').eq('user_id', user.id).single(),
+      sb.from('profiles').select('name').eq('id', user.id).single(),
+    ])
+    const proj = projectRes.data?.projects as unknown as { client_name: string } | { client_name: string }[] | null
     clientProjectName = (Array.isArray(proj) ? proj[0] : proj)?.client_name
+    clientUserName = profileRes.data?.name ?? ''
   }
 
   return (
     <html lang="en" className="h-full">
       <body className="min-h-full bg-gray-50">
         {user && role === 'client' && (
-          <ClientNavbar userEmail={user.email ?? ''} projectName={clientProjectName} />
+          <ClientNavbar userName={clientUserName ?? ''} projectName={clientProjectName} />
         )}
         {user && role === 'coordinator' && (
           <CoordinatorNavbar userEmail={user.email ?? ''} />
