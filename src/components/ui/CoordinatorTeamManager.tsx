@@ -3,7 +3,7 @@ import { useState, useTransition } from 'react'
 import { HardHat, User, Plus, Briefcase, Pencil, X, Eye, EyeOff } from 'lucide-react'
 import { createUserAsCoordinator, updateMemberDetails } from '@/app/actions'
 
-interface Person { id: string; name: string; phone?: string }
+interface Person { id: string; name: string; phone?: string | null; authEmail?: string | null }
 interface Project { id: string; client_name: string }
 
 interface Props {
@@ -17,7 +17,7 @@ type Tab = 'engineers' | 'managers' | 'clients'
 
 interface Credentials { phone: string; password: string }
 
-interface EditState { id: string; name: string; phone: string; password: string }
+interface EditState { id: string; name: string; phone: string; email: string; password: string }
 
 export function CoordinatorTeamManager({ engineers: initialEngineers, managers: initialManagers, clients: initialClients, projects }: Props) {
   const [tab, setTab] = useState<Tab>('engineers')
@@ -78,6 +78,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
         const res = await updateMemberDetails(snap.id, {
           name: snap.name || undefined,
           phone: snap.phone || undefined,
+          email: snap.email || undefined,
           password: snap.password || undefined,
         })
         if (res.error) { setEditError(res.error); return }
@@ -88,7 +89,7 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
 
       function updatePerson(prev: Person[]) {
         return prev.map(p => p.id === snap.id
-          ? { ...p, name: snap.name || p.name, phone: snap.phone || p.phone }
+          ? { ...p, name: snap.name || p.name, phone: snap.phone || p.phone, authEmail: snap.email || p.authEmail }
           : p
         )
       }
@@ -170,12 +171,15 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
                       <div>
                         <p className="text-sm text-gray-800">{p.name}</p>
                         {p.phone && <p className="text-xs text-gray-400">{p.phone}</p>}
+                        {p.authEmail && !p.authEmail.endsWith('@buildacre.in') && (
+                          <p className="text-xs text-gray-400">{p.authEmail}</p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {savedId === p.id && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
                       <button
-                        onClick={() => { if (isEditing) { setEditState(null); setEditError(null) } else { setEditState({ id: p.id, name: p.name, phone: p.phone ?? '', password: '' }); setEditError(null) } }}
+                        onClick={() => { if (isEditing) { setEditState(null); setEditError(null) } else { const realEmail = p.authEmail && !p.authEmail.endsWith('@buildacre.in') ? p.authEmail : ''; setEditState({ id: p.id, name: p.name, phone: p.phone ?? '', email: realEmail, password: '' }); setEditError(null) } }}
                         className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 border border-gray-200 rounded px-2 py-1 bg-white"
                       >
                         {isEditing ? <X size={12} /> : <Pencil size={12} />}
@@ -214,9 +218,10 @@ export function CoordinatorTeamManager({ engineers: initialEngineers, managers: 
                       )}
 
                       <p className="text-xs font-medium text-gray-500 pt-1">Edit details</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input type="text" placeholder="Name" value={editState.name} onChange={e => setEditState(s => s && ({ ...s, name: e.target.value }))} className={inputCls} />
                         <input type="tel" inputMode="numeric" maxLength={10} placeholder="Phone (= login)" value={editState.phone} onChange={e => setEditState(s => s && ({ ...s, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} className={inputCls} />
+                        <input type="email" placeholder="Email address" value={editState.email} onChange={e => setEditState(s => s && ({ ...s, email: e.target.value }))} className={inputCls} />
                         <input type="text" placeholder="New password (leave blank to keep)" minLength={6} value={editState.password} onChange={e => setEditState(s => s && ({ ...s, password: e.target.value }))} className={inputCls} />
                       </div>
                       {editError && <p className="text-xs text-red-600">{editError}</p>}

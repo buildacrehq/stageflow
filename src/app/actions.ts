@@ -387,7 +387,7 @@ export async function createUserAsCoordinator(
 }
 
 export async function updateMemberDetails(
-  userId: string, data: { name?: string; phone?: string; password?: string }
+  userId: string, data: { name?: string; phone?: string; email?: string; password?: string }
 ): Promise<{ error?: string }> {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
@@ -402,7 +402,7 @@ export async function updateMemberDetails(
   }
 
   const authUpdates: { email?: string; password?: string } = {}
-  if (data.phone) authUpdates.email = `${data.phone}@buildacre.in`
+  if (data.email) authUpdates.email = data.email
   if (data.password) authUpdates.password = data.password
   if (Object.keys(authUpdates).length > 0) {
     const { error } = await sb.auth.admin.updateUserById(userId, authUpdates)
