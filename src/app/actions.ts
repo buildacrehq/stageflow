@@ -195,13 +195,16 @@ export async function updateUserRole(userId: string, role: 'admin' | 'coordinato
 }
 
 export async function updateUserDetails(
-  userId: string, name: string, password: string
+  userId: string, name: string, password: string, email?: string
 ): Promise<{ error?: string }> {
   await requireRole('admin')
   const sb = getAdminClient()
-  await sb.from('profiles').update({ name }).eq('id', userId)
-  if (password) {
-    const { error } = await sb.auth.admin.updateUserById(userId, { password })
+  if (name) await sb.from('profiles').update({ name }).eq('id', userId)
+  const authUpdates: { email?: string; password?: string } = {}
+  if (email) authUpdates.email = email
+  if (password) authUpdates.password = password
+  if (Object.keys(authUpdates).length > 0) {
+    const { error } = await sb.auth.admin.updateUserById(userId, authUpdates)
     if (error) return { error: error.message }
   }
   revalidatePath('/settings')

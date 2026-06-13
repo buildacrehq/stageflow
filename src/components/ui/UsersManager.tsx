@@ -41,6 +41,7 @@ export function UsersManager({ users, currentUserId, projects }: {
   )
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
   const [editPhone, setEditPhone] = useState('')
   const [editPassword, setEditPassword] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
@@ -49,6 +50,7 @@ export function UsersManager({ users, currentUserId, projects }: {
   function openEdit(u: UserProfile) {
     setEditingId(u.id)
     setEditName(u.name ?? '')
+    setEditEmail(u.authEmail && !u.authEmail.endsWith('@buildacre.in') ? u.authEmail : '')
     setEditPhone(u.phone ?? '')
     setEditPassword('')
     setEditError(null)
@@ -105,7 +107,7 @@ export function UsersManager({ users, currentUserId, projects }: {
               phone: editPhone.trim() || undefined,
               password: editPassword || undefined,
             })
-          : await updateUserDetails(u.id, editName.trim(), editPassword)
+          : await updateUserDetails(u.id, editName.trim(), editPassword, editEmail.trim() || undefined)
         if (res.error) { setEditError(res.error); return }
         setEditingId(null)
         setSaved(u.id + '_edit'); setTimeout(() => setSaved(null), 2000)
@@ -289,11 +291,17 @@ export function UsersManager({ users, currentUserId, projects }: {
                 </div>
 
                 {/* Editable fields */}
-                <div className={`grid gap-3 ${isField ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
+                <div className={`grid gap-3 ${isField ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-3'}`}>
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Name</label>
                     <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className={inp} />
                   </div>
+                  {!isField && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Email <span className="text-gray-400">(login)</span></label>
+                      <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="email@example.com" className={inp} />
+                    </div>
+                  )}
                   {isField && (
                     <div>
                       <label className="text-xs text-gray-500 block mb-1">Phone <span className="text-gray-400">(= login)</span></label>
