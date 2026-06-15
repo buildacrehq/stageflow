@@ -149,18 +149,18 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-120">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-400">Stage</th>
-                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Target (days)</th>
-                <th className="text-center px-4 py-2.5 text-xs font-medium text-gray-400">Buffer (days)</th>
+              <tr className="border-b-2 border-gray-200 bg-gray-50">
+                <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 border-r border-gray-200">Stage</th>
+                <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500">Target (days)</th>
+                <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500">Buffer (days)</th>
               </tr>
             </thead>
             <tbody>
-              {items.map(t => {
+              {items.map((t, i) => {
                 const key = `${activeSize}-${t.stage_name}`
                 return (
-                  <tr key={t.stage_name} className={`border-b border-gray-50 transition-colors ${isEditing ? 'bg-green-50/40' : 'hover:bg-gray-50'}`}>
-                    <td className="px-5 py-2.5 font-medium text-gray-800">{t.stage_name}</td>
+                  <tr key={t.stage_name} className={`border-b border-gray-200 transition-colors ${isEditing ? (i % 2 === 0 ? 'bg-green-50/50' : 'bg-green-50/20') : (i % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/60 hover:bg-gray-100/60')}`}>
+                    <td className="px-5 py-3 font-medium text-gray-800 border-r border-gray-200">{t.stage_name}</td>
                     <td className="px-4 py-2.5 text-center">
                       {isEditing ? (
                         <input
