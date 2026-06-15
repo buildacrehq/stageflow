@@ -147,12 +147,12 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{title}</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-120">
+          <table className="w-auto text-sm">
             <thead>
               <tr className="border-b-2 border-gray-200 bg-gray-50">
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 border-r border-gray-200">Stage</th>
-                <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500">Target (days)</th>
-                <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500">Buffer (days)</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 border-r border-gray-200 w-48">Stage</th>
+                <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 w-28">Target (days)</th>
+                <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 w-28">Buffer (days)</th>
               </tr>
             </thead>
             <tbody>
@@ -160,26 +160,26 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
                 const key = `${activeSize}-${t.stage_name}`
                 return (
                   <tr key={t.stage_name} className={`border-b border-gray-200 transition-colors ${isEditing ? (i % 2 === 0 ? 'bg-green-50/50' : 'bg-green-50/20') : (i % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/60 hover:bg-gray-100/60')}`}>
-                    <td className="px-5 py-3 font-medium text-gray-800 border-r border-gray-200">{t.stage_name}</td>
-                    <td className="px-4 py-2.5 text-center">
+                    <td className="px-4 py-2.5 font-medium text-gray-800 border-r border-gray-200">{t.stage_name}</td>
+                    <td className="px-3 py-2.5 text-center">
                       {isEditing ? (
                         <input
                           type="number"
                           value={rawInputs[key]?.target ?? ''}
                           onChange={e => setRawInputs(prev => ({ ...prev, [key]: { ...prev[key], target: e.target.value } }))}
-                          className="w-20 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
+                          className="w-16 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                       ) : (
                         <span className="font-medium text-gray-700">{getVal(activeSize, t.stage_name, 'target')}d</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-center">
+                    <td className="px-3 py-2.5 text-center">
                       {isEditing ? (
                         <input
                           type="number"
                           value={rawInputs[key]?.buffer ?? ''}
                           onChange={e => setRawInputs(prev => ({ ...prev, [key]: { ...prev[key], buffer: e.target.value } }))}
-                          className="w-20 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
+                          className="w-16 border border-green-300 rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                       ) : (
                         <span className="text-gray-500">{getVal(activeSize, t.stage_name, 'buffer')}d</span>
