@@ -129,6 +129,8 @@ export async function createProject(data: {
   project_manager_name?: string | null
   project_manager_phone?: string | null
   maps_link?: string | null
+  drive_link?: string | null
+  slab_area?: number | null
 }) {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
@@ -318,7 +320,7 @@ export async function upsertAllPlotSizeTargets(
   plotSize: string,
   items: { stageName: string; targetDays: number; bufferDays: number }[]
 ): Promise<{ error?: string }> {
-  await requireRole('admin')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   const { error } = await sb.from('plot_size_stage_targets').upsert(
     items.map(i => ({
@@ -337,7 +339,7 @@ export async function upsertAllPlotSizeTargets(
 export async function upsertPlotSizeTarget(
   plotSize: string, stageName: string, targetDays: number, bufferDays: number
 ): Promise<{ error?: string }> {
-  await requireRole('admin')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   const { error } = await sb.from('plot_size_stage_targets').upsert(
     { plot_size: plotSize, stage_name: stageName, target_days: targetDays, buffer_days: bufferDays },
@@ -425,6 +427,8 @@ export async function updateProject(id: string, data: {
   project_manager_name: string | null
   project_manager_phone: string | null
   maps_link: string | null
+  drive_link: string | null
+  slab_area: number | null
 }) {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()

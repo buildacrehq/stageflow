@@ -28,6 +28,8 @@ export interface Project {
   project_manager_name: string | null
   project_manager_phone: string | null
   maps_link: string | null
+  drive_link: string | null
+  slab_area: number | null
   created_at: string
   updated_at: string
 }

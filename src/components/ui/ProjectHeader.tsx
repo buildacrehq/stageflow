@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Phone, MapPin, Users, HardHat, ExternalLink, CalendarDays, Layers, Briefcase } from 'lucide-react'
+import { Phone, MapPin, Users, HardHat, ExternalLink, CalendarDays, Layers, Briefcase, FolderOpen, Maximize2 } from 'lucide-react'
 import type { Project } from '@/types'
 
 interface Props {
@@ -66,6 +66,12 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
                   <Phone size={11} />
                   {project.client_phone}
                 </a>
+              )}
+              {project.slab_area && (
+                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                  <Maximize2 size={11} className="text-gray-400" />
+                  {project.slab_area.toLocaleString()} sqft
+                </span>
               )}
               {project.mob_date && (
                 <span className="inline-flex items-center gap-1 text-xs text-gray-500">
@@ -171,6 +177,23 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
                       Open in Maps
                     </a>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Google Drive */}
+            {project.drive_link && (
+              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <FolderOpen size={15} className="text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Project Files</p>
+                  <p className="text-sm font-semibold text-gray-800">Google Drive</p>
+                  <a href={project.drive_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-0.5">
+                    <ExternalLink size={10} />
+                    Open Drive
+                  </a>
                 </div>
               </div>
             )}

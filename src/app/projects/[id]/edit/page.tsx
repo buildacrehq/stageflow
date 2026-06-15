@@ -63,7 +63,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
       </div>
 
       {/* Stage timeline overrides — admin + coordinator */}
-      {role === 'admin' && (
+      {(role === 'admin' || role === 'coordinator') && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2 mb-0.5">

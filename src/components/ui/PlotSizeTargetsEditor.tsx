@@ -4,7 +4,7 @@ import { upsertAllPlotSizeTargets } from '@/app/actions'
 import { useBeforeUnload } from '@/lib/hooks'
 import type { StageTarget } from '@/types'
 
-const PLOT_SIZES = ['20x30', '20x40', '30x40', '30x50', '40x40', '40x60'] as const
+const STANDARD_PLOT_SIZES = ['20x30', '20x40', '30x40', '30x50', '40x40', '40x60']
 
 interface PlotSizeRow {
   plot_size: string
@@ -19,7 +19,16 @@ interface Props {
 }
 
 export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props) {
-  const [activeSize, setActiveSize] = useState<string>(PLOT_SIZES[0])
+  const existingCustom = plotSizeTargets
+    .map(r => r.plot_size)
+    .filter(s => !STANDARD_PLOT_SIZES.includes(s))
+    .filter((s, i, arr) => arr.indexOf(s) === i)
+
+  const [customSizes, setCustomSizes] = useState<string[]>(existingCustom)
+  const [newSizeInput, setNewSizeInput] = useState('')
+  const [showAddInput, setShowAddInput] = useState(false)
+  const allSizes = [...STANDARD_PLOT_SIZES, ...customSizes]
+  const [activeSize, setActiveSize] = useState<string>(STANDARD_PLOT_SIZES[0])
   const [isEditing, setIsEditing] = useState(false)
   const [savedAll, setSavedAll] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -98,6 +107,25 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
       return
     }
     setActiveSize(size)
+  }
+
+  function handleAddCustomSize() {
+    const size = newSizeInput.trim()
+    if (!size || allSizes.includes(size)) {
+      setNewSizeInput('')
+      setShowAddInput(false)
+      return
+    }
+    setCustomSizes(prev => [...prev, size])
+    setNewSizeInput('')
+    setShowAddInput(false)
+    setActiveSize(size)
+    startTransition(async () => {
+      await upsertAllPlotSizeTargets(
+        size,
+        globalTargets.map(t => ({ stageName: t.stage_name, targetDays: t.target_days, bufferDays: t.buffer_days }))
+      )
+    })
   }
 
   function confirmTabSwitch() {
@@ -189,8 +217,8 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
       )}
 
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-        <div className="flex items-center gap-1 overflow-x-auto">
-          {PLOT_SIZES.map(size => (
+        <div className="flex items-center gap-1 overflow-x-auto flex-wrap">
+          {allSizes.map(size => (
             <button
               key={size}
               onClick={() => handleTabClick(size)}
@@ -203,6 +231,28 @@ export function PlotSizeTargetsEditor({ globalTargets, plotSizeTargets }: Props)
               {size}
             </button>
           ))}
+          {showAddInput ? (
+            <div className="flex items-center gap-1 ml-1">
+              <input
+                autoFocus
+                value={newSizeInput}
+                onChange={e => setNewSizeInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomSize() } if (e.key === 'Escape') { setShowAddInput(false); setNewSizeInput('') } }}
+                placeholder="e.g. 25x35"
+                className="text-xs px-2 py-1.5 border border-green-300 rounded-lg w-24 focus:outline-none focus:ring-1 focus:ring-green-600"
+              />
+              <button onClick={handleAddCustomSize} className="text-xs px-2 py-1.5 bg-green-700 text-white rounded-lg hover:bg-green-800">Add</button>
+              <button onClick={() => { setShowAddInput(false); setNewSizeInput('') }} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddInput(true)}
+              className="text-xs px-2.5 py-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+              title="Add custom dimension"
+            >
+              + Custom
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2 ml-4 shrink-0">
           {isEditing ? (

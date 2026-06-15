@@ -7,11 +7,19 @@ import type { Project } from '@/types'
 
 interface Engineer { id: string; name: string; phone?: string | null }
 
+const STANDARD_PLOT_SIZES = ['20x30', '20x40', '30x40', '30x50', '40x40', '40x60']
+
+function getInitialPlotSizeOption(plotSize: string | null | undefined): string {
+  if (!plotSize) return ''
+  return STANDARD_PLOT_SIZES.includes(plotSize) ? plotSize : 'custom'
+}
+
 export function ProjectForm({ project, engineers = [], managers = [] }: { project?: Project; engineers?: Engineer[]; managers?: Engineer[] }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [showMap, setShowMap] = useState(!!project?.maps_link)
+  const [showDrive, setShowDrive] = useState(!!project?.drive_link)
   const [engineerName, setEngineerName] = useState(
     engineers.find(e => e.name === project?.engineer_name)?.name ?? ''
   )
@@ -20,6 +28,10 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
     managers.find(m => m.name === project?.project_manager_name)?.name ?? ''
   )
   const [managerPhone, setManagerPhone] = useState(project?.project_manager_phone ?? '')
+  const [plotSizeOption, setPlotSizeOption] = useState(getInitialPlotSizeOption(project?.plot_size))
+  const [customPlotSize, setCustomPlotSize] = useState(
+    project?.plot_size && !STANDARD_PLOT_SIZES.includes(project.plot_size) ? project.plot_size : ''
+  )
   const [isDirty, setIsDirty] = useState(false)
 
   useBeforeUnload(isDirty)
@@ -29,12 +41,13 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
     setIsDirty(false)
     setError(null)
     const fd = new FormData(e.currentTarget)
+    const slabRaw = fd.get('slab_area') as string
     const data = {
       client_name: fd.get('client_name') as string,
       location: (fd.get('location') as string) || null,
       mob_date: (fd.get('mob_date') as string) || null,
       floors: (fd.get('floors') as string) || null,
-      plot_size: (fd.get('plot_size') as string) || null,
+      plot_size: plotSizeOption === 'custom' ? (customPlotSize.trim() || null) : (plotSizeOption || null),
       status: fd.get('status') as string,
       notes: (fd.get('notes') as string) || null,
       client_phone: (fd.get('client_phone') as string) || null,
@@ -43,6 +56,8 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
       project_manager_name: (fd.get('project_manager_name') as string) || null,
       project_manager_phone: (fd.get('project_manager_phone') as string) || null,
       maps_link: showMap ? ((fd.get('maps_link') as string) || null) : null,
+      drive_link: showDrive ? ((fd.get('drive_link') as string) || null) : null,
+      slab_area: slabRaw ? parseInt(slabRaw, 10) || null : null,
     }
 
     startTransition(async () => {
@@ -61,6 +76,18 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
   }
 
   const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-shadow'
+
+  function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${on ? 'bg-green-600' : 'bg-gray-200'}`}
+      >
+        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${on ? 'translate-x-4' : 'translate-x-1'}`} />
+      </button>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit} onChange={() => setIsDirty(true)} className="space-y-5">
@@ -84,6 +111,18 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
               defaultValue={project?.client_phone ?? ''}
               placeholder="e.g. 9876543210"
               onInput={e => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '').slice(0, 10) }}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Slab area (sqft)</label>
+            <input
+              name="slab_area"
+              type="number"
+              min="0"
+              step="1"
+              defaultValue={project?.slab_area ?? ''}
+              placeholder="e.g. 1200"
               className={inputCls}
             />
           </div>
@@ -178,7 +217,11 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Plot size</label>
-            <select name="plot_size" defaultValue={project?.plot_size ?? ''} className={inputCls + ' bg-white'}>
+            <select
+              value={plotSizeOption}
+              onChange={e => { setPlotSizeOption(e.target.value); setIsDirty(true) }}
+              className={inputCls + ' bg-white'}
+            >
               <option value="">Not set</option>
               <option value="20x30">20×30</option>
               <option value="20x40">20×40</option>
@@ -186,7 +229,16 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
               <option value="30x50">30×50</option>
               <option value="40x40">40×40</option>
               <option value="40x60">40×60</option>
+              <option value="custom">Custom…</option>
             </select>
+            {plotSizeOption === 'custom' && (
+              <input
+                value={customPlotSize}
+                onChange={e => { setCustomPlotSize(e.target.value); setIsDirty(true) }}
+                placeholder="e.g. 25x35"
+                className={inputCls + ' mt-2'}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -198,23 +250,21 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
 
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <button
-            type="button"
-            onClick={() => setShowMap(v => !v)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${showMap ? 'bg-green-600' : 'bg-gray-200'}`}
-          >
-            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showMap ? 'translate-x-4' : 'translate-x-1'}`} />
-          </button>
+          <Toggle on={showMap} onToggle={() => setShowMap(v => !v)} />
           <label className="text-xs font-medium text-gray-600">Google Maps link</label>
         </div>
         {showMap && (
-          <input
-            name="maps_link"
-            type="url"
-            defaultValue={project?.maps_link ?? ''}
-            placeholder="https://maps.google.com/..."
-            className={inputCls}
-          />
+          <input name="maps_link" type="url" defaultValue={project?.maps_link ?? ''} placeholder="https://maps.google.com/..." className={inputCls} />
+        )}
+      </div>
+
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Toggle on={showDrive} onToggle={() => setShowDrive(v => !v)} />
+          <label className="text-xs font-medium text-gray-600">Google Drive link</label>
+        </div>
+        {showDrive && (
+          <input name="drive_link" type="url" defaultValue={project?.drive_link ?? ''} placeholder="https://drive.google.com/..." className={inputCls} />
         )}
       </div>
 
