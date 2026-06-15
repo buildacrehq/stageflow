@@ -58,11 +58,12 @@ export async function proxy(request: NextRequest) {
     if (!allowed) return NextResponse.redirect(new URL('/manager', request.url))
   }
 
-  // Coordinators can only access /coordinator/* and /projects/*
+  // Coordinators can only access /coordinator/*, /projects/*, and /settings
   if (role === 'coordinator') {
     const allowed = pathname === '/coordinator'
       || pathname.startsWith('/coordinator/')
       || pathname.startsWith('/projects/')
+      || pathname === '/settings'
     if (!allowed) return NextResponse.redirect(new URL('/coordinator', request.url))
   }
 
