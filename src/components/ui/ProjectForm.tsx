@@ -18,8 +18,8 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [showMap, setShowMap] = useState(!!project?.maps_link)
-  const [showDrive, setShowDrive] = useState(!!project?.drive_link)
+  const [showMap, setShowMap] = useState(project ? !!project.maps_link : true)
+  const [showDrive, setShowDrive] = useState(project ? !!project.drive_link : true)
   const [engineerName, setEngineerName] = useState(
     engineers.find(e => e.name === project?.engineer_name)?.name ?? ''
   )
