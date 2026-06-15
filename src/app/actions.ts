@@ -46,7 +46,7 @@ export async function updateStageDate(
 export async function updateStageTargetDuration(
   stageName: string, duration: number, bufferDays: number
 ) {
-  await requireRole('admin')
+  await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
   const { data: all } = await sb.from('stage_targets').select('*').order('sort_order')
   if (!all) return

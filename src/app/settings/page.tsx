@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { PlotSizeTargetsEditor } from '@/components/ui/PlotSizeTargetsEditor'
+import { TargetsEditor } from '@/components/ui/TargetsEditor'
 import { UsersManager } from '@/components/ui/UsersManager'
 import { getUserRole, getCurrentUser } from '@/lib/supabase-server'
 import { AddUserForm } from '@/components/ui/AddUserForm'
@@ -16,7 +17,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   const isAdmin = role === 'admin'
   const { tab = 'targets' } = await searchParams
-  const activeTab = (tab === 'users' && isAdmin) ? 'users' : 'targets'
+  const activeTab = (tab === 'users' && isAdmin) ? 'users' : tab === 'stage-targets' ? 'stage-targets' : 'targets'
 
   const currentUser = await getCurrentUser()
 
@@ -102,9 +103,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        <Link href="/settings?tab=stage-targets" className={tabCls('stage-targets')}>Stage Targets</Link>
         <Link href="/settings?tab=targets" className={tabCls('targets')}>Plot Size Targets</Link>
         {isAdmin && <Link href="/settings?tab=users" className={tabCls('users')}>Users</Link>}
       </div>
+
+      {activeTab === 'stage-targets' && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+            <p className="text-sm font-medium text-gray-700">Stage Targets</p>
+            <p className="text-xs text-gray-400 mt-0.5">Global default target and buffer days for every stage. Applies to all projects unless overridden.</p>
+          </div>
+          <TargetsEditor targets={targets} />
+        </div>
+      )}
 
       {activeTab === 'targets' && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
