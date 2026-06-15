@@ -19,12 +19,20 @@ function sb() {
 
 async function getData(id: string) {
   const client = sb()
-  const [projectRes, stagesRes, targetsRes, stageDataRes] = await Promise.all([
+  const [projectRes, stagesRes, targetsRes, stageDataRes, coordAssignRes] = await Promise.all([
     client.from('projects').select('*').eq('id', id).single(),
     client.from('stage_status_view').select('*').eq('project_id', id).order('sort_order'),
     client.from('stage_targets').select('*').order('sort_order'),
     client.from('project_stages').select('stage_name, notes, payment_date').eq('project_id', id),
+    client.from('coordinator_projects').select('user_id').eq('project_id', id).is('removed_at', null).limit(1).maybeSingle(),
   ])
+  let coordinatorName: string | null = null
+  let coordinatorPhone: string | null = null
+  if (coordAssignRes.data?.user_id) {
+    const { data: profile } = await client.from('profiles').select('name, phone').eq('id', coordAssignRes.data.user_id).single()
+    coordinatorName = (profile?.name as string) ?? null
+    coordinatorPhone = (profile?.phone as string) ?? null
+  }
   return {
     project: projectRes.data,
     stages: (stagesRes.data ?? []) as StageStatusRow[],
@@ -35,6 +43,8 @@ async function getData(id: string) {
     stagePayments: Object.fromEntries(
       (stageDataRes.data ?? []).map(r => [r.stage_name, r.payment_date as string | null])
     ) as Record<string, string | null>,
+    coordinatorName,
+    coordinatorPhone,
   }
 }
 
@@ -68,7 +78,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     if (!data) redirect('/coordinator')
   }
 
-  const { project, stages, targets, stageNotes, stagePayments } = await getData(id)
+  const { project, stages, targets, stageNotes, stagePayments, coordinatorName, coordinatorPhone } = await getData(id)
   if (!project) notFound()
 
   // Coordinator + site engineer + project manager assignment data
@@ -178,6 +188,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         buffer={buffer}
         delayed={delayed}
         role={role}
+        coordinatorName={coordinatorName}
+        coordinatorPhone={coordinatorPhone}
       />
 
       {(role === 'admin' || role === 'coordinator') && (

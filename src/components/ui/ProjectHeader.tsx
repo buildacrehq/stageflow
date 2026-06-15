@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Phone, MapPin, User, HardHat, ExternalLink, CalendarDays, Layers, Briefcase } from 'lucide-react'
+import { Phone, MapPin, Users, HardHat, ExternalLink, CalendarDays, Layers, Briefcase } from 'lucide-react'
 import type { Project } from '@/types'
 
 interface Props {
@@ -10,9 +10,11 @@ interface Props {
   buffer: number
   delayed: number
   role: string
+  coordinatorName?: string | null
+  coordinatorPhone?: string | null
 }
 
-export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, delayed, role }: Props) {
+export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, delayed, role, coordinatorName, coordinatorPhone }: Props) {
   const mapEmbedSrc = project.location
     ? `https://maps.google.com/maps?q=${encodeURIComponent(project.location)}&output=embed&z=14`
     : null
@@ -59,6 +61,12 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
             </div>
             <h1 className="text-xl font-bold text-gray-900 mt-1">{project.client_name}</h1>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
+              {project.client_phone && (
+                <a href={`tel:${project.client_phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+                  <Phone size={11} />
+                  {project.client_phone}
+                </a>
+              )}
               {project.mob_date && (
                 <span className="inline-flex items-center gap-1 text-xs text-gray-500">
                   <CalendarDays size={11} className="text-gray-400" />
@@ -90,22 +98,24 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
           {/* Contact grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-            {/* Client */}
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                <User size={15} className="text-blue-600" />
+            {/* Coordinator */}
+            {(coordinatorName || coordinatorPhone) && (
+              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <Users size={15} className="text-teal-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Coordinator</p>
+                  <p className="text-sm font-semibold text-gray-800 truncate">{coordinatorName ?? 'Coordinator'}</p>
+                  {coordinatorPhone && (
+                    <a href={`tel:${coordinatorPhone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-0.5">
+                      <Phone size={10} />
+                      {coordinatorPhone}
+                    </a>
+                  )}
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Client</p>
-                <p className="text-sm font-semibold text-gray-800 truncate">{project.client_name}</p>
-                {project.client_phone && (
-                  <a href={`tel:${project.client_phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-0.5">
-                    <Phone size={10} />
-                    {project.client_phone}
-                  </a>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Engineer */}
             {(project.engineer_name || project.engineer_phone) && (

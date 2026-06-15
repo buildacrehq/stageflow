@@ -34,11 +34,12 @@ export default async function ManagerProjectPage({ params }: { params: Promise<{
     .maybeSingle()
   if (!assignment) redirect('/manager')
 
-  const [projectRes, stagesRes, targetsRes, stageDataRes] = await Promise.all([
+  const [projectRes, stagesRes, targetsRes, stageDataRes, coordAssignRes] = await Promise.all([
     client.from('projects').select('*').eq('id', id).single(),
     client.from('stage_status_view').select('*').eq('project_id', id).order('sort_order'),
     client.from('stage_targets').select('*').order('sort_order'),
     client.from('project_stages').select('stage_name, notes, payment_date').eq('project_id', id),
+    client.from('coordinator_projects').select('user_id').eq('project_id', id).is('removed_at', null).limit(1).maybeSingle(),
   ])
 
   if (!projectRes.data) notFound()
@@ -52,6 +53,13 @@ export default async function ManagerProjectPage({ params }: { params: Promise<{
   const stagePayments = Object.fromEntries(
     (stageDataRes.data ?? []).map(r => [r.stage_name, r.payment_date as string | null])
   )
+  let coordinatorName: string | null = null
+  let coordinatorPhone: string | null = null
+  if (coordAssignRes.data?.user_id) {
+    const { data: profile } = await client.from('profiles').select('name, phone').eq('id', coordAssignRes.data.user_id).single()
+    coordinatorName = (profile?.name as string) ?? null
+    coordinatorPhone = (profile?.phone as string) ?? null
+  }
 
   const doneStages = stages.filter(s => s.completed_date)
   const onTime = doneStages.filter(s => s.stage_status === 'on_time').length
@@ -68,6 +76,8 @@ export default async function ManagerProjectPage({ params }: { params: Promise<{
         buffer={buffer}
         delayed={delayed}
         role="project_manager"
+        coordinatorName={coordinatorName}
+        coordinatorPhone={coordinatorPhone}
       />
 
       <div className="bg-white border border-gray-200 rounded-xl p-5">
