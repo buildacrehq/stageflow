@@ -5,6 +5,8 @@ export const STRUCTURE_STAGES = [
   'SF Wall', 'SF Roof',
   'TF Wall', 'TF Roof',
   '4F Wall', '4F Roof',
+  '5F Wall', '5F Roof',
+  '6F Wall', '6F Roof',
 ]
 
 export const FINISHING_STAGES = [
@@ -19,7 +21,7 @@ export const ALL_STAGES = [...STRUCTURE_STAGES, ...FINISHING_STAGES]
 
 // Returns structure stage names visible for a given floor count.
 // null floors = show all (safe default for existing projects).
-const FLOOR_CUTOFF: Record<string, number> = { 'G': 4, 'G+1': 6, 'G+2': 8, 'G+3': 10, 'G+4': 12 }
+const FLOOR_CUTOFF: Record<string, number> = { 'G': 4, 'G+1': 6, 'G+2': 8, 'G+3': 10, 'G+4': 12, 'G+5': 14, 'G+6': 16 }
 export function visibleStructureStages(floors: string | null): string[] {
   const cutoff = floors ? (FLOOR_CUTOFF[floors] ?? 12) : 12
   return STRUCTURE_STAGES.slice(0, cutoff)

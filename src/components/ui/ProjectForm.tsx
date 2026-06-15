@@ -172,6 +172,8 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
               <option value="G+2">G+2 — 2 upper floors</option>
               <option value="G+3">G+3 — 3 upper floors</option>
               <option value="G+4">G+4 — 4 upper floors</option>
+              <option value="G+5">G+5 — 5 upper floors</option>
+              <option value="G+6">G+6 — 6 upper floors</option>
             </select>
           </div>
           <div>
