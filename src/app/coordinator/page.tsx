@@ -1,15 +1,17 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
 import { KpiCard } from '@/components/ui/KpiCard'
 import { ProjectProgressPanel } from '@/components/ui/ProjectProgressPanel'
 import { DeadlinesPanel } from '@/components/ui/DeadlinesPanel'
 import { visibleStructureStages, FINISHING_STAGES } from '@/lib/constants'
+import { parseCategoryParam, categoryTabCls } from '@/lib/dataCategory'
 import type { ProjectSummary } from '@/types'
 
 export const revalidate = 0
 
-export default async function CoordinatorOverviewPage() {
+export default async function CoordinatorOverviewPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const role = await getUserRole()
@@ -40,10 +42,14 @@ export default async function CoordinatorOverviewPage() {
     sb.from('projects').select('id, floors').in('id', projectIds),
   ])
 
-  const summaries = (summariesRes.data ?? []) as ProjectSummary[]
+  const allSummaries = (summariesRes.data ?? []) as ProjectSummary[]
   const targets = targetsRes.data ?? []
   const completedStages = completedStagesRes.data ?? []
   const floorsMap = Object.fromEntries((projectsRes.data ?? []).map(p => [p.id, p.floors as string | null]))
+
+  const { category } = await searchParams
+  const activeCategory = parseCategoryParam(category)
+  const summaries = activeCategory === 'all' ? allSummaries : allSummaries.filter(p => p.data_category === activeCategory)
 
   // KPIs — active projects only
   const activeProjects = summaries.filter(p => p.status === 'active')
@@ -108,11 +114,18 @@ export default async function CoordinatorOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">Overview</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          {totalCount} project{totalCount !== 1 ? 's' : ''} assigned · milestone stats show active projects only
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Overview</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {totalCount} project{totalCount !== 1 ? 's' : ''} assigned · milestone stats show active projects only
+          </p>
+        </div>
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          <Link href="/coordinator?category=tracked" className={categoryTabCls(activeCategory, 'tracked')}>Tracked</Link>
+          <Link href="/coordinator?category=reference" className={categoryTabCls(activeCategory, 'reference')}>Reference</Link>
+          <Link href="/coordinator?category=all" className={categoryTabCls(activeCategory, 'all')}>All</Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

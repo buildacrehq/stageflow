@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
 import { AnalysisCharts } from '@/components/charts/AnalysisCharts'
+import { parseCategoryParam, categoryTabCls } from '@/lib/dataCategory'
 import type { ProjectSummary, StageStatusRow, StageAnalysis, StageCategory } from '@/types'
 
 export const revalidate = 0
 
-export default async function CoordinatorAnalysisPage() {
+export default async function CoordinatorAnalysisPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const role = await getUserRole()
@@ -36,9 +38,15 @@ export default async function CoordinatorAnalysisPage() {
     sb.from('stage_targets').select('*').order('sort_order'),
   ])
 
-  const summaries = (summariesRes.data ?? []) as ProjectSummary[]
-  const allStages = (allStagesRes.data ?? []) as StageStatusRow[]
+  const allSummaries = (summariesRes.data ?? []) as ProjectSummary[]
+  const allStagesRaw = (allStagesRes.data ?? []) as StageStatusRow[]
   const targets = targetsRes.data ?? []
+
+  const { category } = await searchParams
+  const activeCategory = parseCategoryParam(category)
+  const summaries = activeCategory === 'all' ? allSummaries : allSummaries.filter(p => p.data_category === activeCategory)
+  const includedIds = new Set(summaries.map(p => p.id))
+  const allStages = activeCategory === 'all' ? allStagesRaw : allStagesRaw.filter(s => includedIds.has(s.project_id))
 
   // Build StageAnalysis from raw stage data (filtered to this coordinator's projects)
   const stageAnalysis: StageAnalysis[] = targets.map(t => {
@@ -99,9 +107,16 @@ export default async function CoordinatorAnalysisPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">Analysis</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Stage performance across your {summaries.length} assigned project{summaries.length !== 1 ? 's' : ''}</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Analysis</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Stage performance across your {summaries.length} assigned project{summaries.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          <Link href="/coordinator/analysis?category=tracked" className={categoryTabCls(activeCategory, 'tracked')}>Tracked</Link>
+          <Link href="/coordinator/analysis?category=reference" className={categoryTabCls(activeCategory, 'reference')}>Reference</Link>
+          <Link href="/coordinator/analysis?category=all" className={categoryTabCls(activeCategory, 'all')}>All</Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
