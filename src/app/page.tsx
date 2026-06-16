@@ -5,21 +5,22 @@ import { OverviewCharts } from '@/components/charts/OverviewCharts'
 import { DeadlinesPanel } from '@/components/ui/DeadlinesPanel'
 import { ProjectProgressPanel } from '@/components/ui/ProjectProgressPanel'
 import { visibleStructureStages, FINISHING_STAGES } from '@/lib/constants'
-import type { ProjectSummary, StageAnalysis } from '@/types'
+import type { ProjectSummary, StageAnalysis, StageStatusRow } from '@/types'
+import { computeStageAnalysis } from '@/lib/stageAnalysis'
 
 export const revalidate = 0
 
 async function getData() {
-  const [summaries, stageAnalysis, completedStages, targets, projectFloors] = await Promise.all([
+  const [summaries, allStages, completedStages, targets, projectFloors] = await Promise.all([
     supabase.from('project_summary_view').select('*'),
-    supabase.from('stage_analysis_view').select('*').order('sort_order'),
+    supabase.from('stage_status_view').select('*'),
     supabase.from('project_stages').select('project_id, stage_name').not('completed_date', 'is', null),
     supabase.from('stage_targets').select('stage_name, target_days, sort_order').order('sort_order'),
     supabase.from('projects').select('id, floors'),
   ])
   return {
     summaries: (summaries.data ?? []) as ProjectSummary[],
-    stageAnalysis: (stageAnalysis.data ?? []) as StageAnalysis[],
+    allStages: (allStages.data ?? []) as StageStatusRow[],
     completedStages: completedStages.data ?? [],
     targets: targets.data ?? [],
     floorsMap: Object.fromEntries((projectFloors.data ?? []).map(p => [p.id, p.floors as string | null])),
@@ -27,11 +28,14 @@ async function getData() {
 }
 
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
-  const { summaries: allSummaries, stageAnalysis, completedStages, targets, floorsMap } = await getData()
+  const { summaries: allSummaries, allStages: allStagesRaw, completedStages, targets, floorsMap } = await getData()
 
   const { category = 'all' } = await searchParams
   const activeCategory = category === 'tracked' || category === 'reference' ? category : 'all'
   const summaries = activeCategory === 'all' ? allSummaries : allSummaries.filter(p => p.data_category === activeCategory)
+  const includedIds = new Set(summaries.map(p => p.id))
+  const allStages = activeCategory === 'all' ? allStagesRaw : allStagesRaw.filter(s => includedIds.has(s.project_id))
+  const stageAnalysis: StageAnalysis[] = computeStageAnalysis(allStages)
 
   const totalProjects = summaries.length
   const active = summaries.filter(p => p.status === 'active').length

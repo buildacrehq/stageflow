@@ -131,6 +131,9 @@ export async function createProject(data: {
 }) {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
+  if (data.data_category === 'tracked' && !data.mob_date) {
+    data = { ...data, data_category: 'reference' }
+  }
   const { data: project, error } = await sb
     .from('projects')
     .insert(data)
@@ -426,6 +429,9 @@ export async function updateProject(id: string, data: {
 }) {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
+  if (data.data_category === 'tracked' && !data.mob_date) {
+    data = { ...data, data_category: 'reference' }
+  }
   await sb.from('projects').update(data).eq('id', id)
   revalidatePath(`/projects/${id}`)
 }

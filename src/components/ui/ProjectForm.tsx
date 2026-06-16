@@ -44,6 +44,11 @@ export function ProjectForm({ project }: { project?: Project }) {
       slab_area: slabRaw ? parseInt(slabRaw, 10) || null : null,
       data_category: fd.get('data_category') as string,
     }
+    // Tracked projects need a mob date to anchor stage timelines — without one,
+    // save as Reference instead of blocking the save.
+    if (data.data_category === 'tracked' && !data.mob_date) {
+      data.data_category = 'reference'
+    }
 
     startTransition(async () => {
       try {
@@ -121,6 +126,7 @@ export function ProjectForm({ project }: { project?: Project }) {
               <option value="tracked">Tracked — complete data, used in analysis</option>
               <option value="reference">Reference — incomplete data, kept for record only</option>
             </select>
+            <p className="text-xs text-gray-400 mt-1">Tracked requires a mobilisation date — if left blank, this saves as Reference automatically.</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Number of floors</label>

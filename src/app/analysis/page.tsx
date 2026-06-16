@@ -1,31 +1,31 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { AnalysisCharts } from '@/components/charts/AnalysisCharts'
-import type { StageAnalysis, ProjectSummary, StageStatusRow } from '@/types'
+import { computeStageAnalysis } from '@/lib/stageAnalysis'
+import type { ProjectSummary, StageStatusRow } from '@/types'
 
 export const revalidate = 60
 
 async function getData() {
-  const [stageAnalysis, summaries, allStages] = await Promise.all([
-    supabase.from('stage_analysis_view').select('*').order('sort_order'),
+  const [summaries, allStages] = await Promise.all([
     supabase.from('project_summary_view').select('*'),
     supabase.from('stage_status_view').select('*'),
   ])
   return {
-    stageAnalysis: (stageAnalysis.data ?? []) as StageAnalysis[],
     summaries: (summaries.data ?? []) as ProjectSummary[],
     allStages: (allStages.data ?? []) as StageStatusRow[],
   }
 }
 
 export default async function AnalysisPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
-  const { stageAnalysis, summaries: allSummaries, allStages: allStagesRaw } = await getData()
+  const { summaries: allSummaries, allStages: allStagesRaw } = await getData()
 
   const { category = 'all' } = await searchParams
   const activeCategory = category === 'tracked' || category === 'reference' ? category : 'all'
   const summaries = activeCategory === 'all' ? allSummaries : allSummaries.filter(p => p.data_category === activeCategory)
   const includedIds = new Set(summaries.map(p => p.id))
   const allStages = activeCategory === 'all' ? allStagesRaw : allStagesRaw.filter(s => includedIds.has(s.project_id))
+  const stageAnalysis = computeStageAnalysis(allStages)
 
   // Bottleneck: stages with highest avg delay
   const bottlenecks = stageAnalysis

@@ -30,6 +30,22 @@ create table if not exists projects (
   updated_at    timestamptz default now()
 );
 
+-- Columns added after initial table creation, applied directly on the live
+-- database over time. Listed here (idempotent — safe to re-run) so this file
+-- stays an accurate record of the real schema.
+alter table projects add column if not exists floors text;
+alter table projects add column if not exists plot_size text;
+alter table projects add column if not exists client_phone text;
+alter table projects add column if not exists engineer_name text;
+alter table projects add column if not exists engineer_phone text;
+alter table projects add column if not exists project_manager_name text;
+alter table projects add column if not exists project_manager_phone text;
+alter table projects add column if not exists maps_link text;
+alter table projects add column if not exists drive_link text;
+alter table projects add column if not exists slab_area integer;
+alter table projects add column if not exists data_category text not null default 'tracked'
+  check (data_category in ('tracked', 'reference'));
+
 -- --------------------------------------------------------
 -- 3. PROJECT STAGES (one row per stage per project)
 -- --------------------------------------------------------
@@ -43,6 +59,9 @@ create table if not exists project_stages (
   updated_at      timestamptz default now(),
   unique (project_id, stage_name)
 );
+
+-- Added after initial creation, applied directly on the live database.
+alter table project_stages add column if not exists payment_date date;
 
 -- --------------------------------------------------------
 -- 4. ANALYTICS VIEW — flat row per stage per project
