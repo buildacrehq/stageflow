@@ -3,7 +3,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createProject, updateProject } from '@/app/actions'
 import { useBeforeUnload } from '@/lib/hooks'
-import type { Project } from '@/types'
+import type { Project, DataCategory } from '@/types'
 
 const STANDARD_PLOT_SIZES = ['20x30', '20x40', '30x40', '30x50', '40x40', '40x60']
 
@@ -42,7 +42,7 @@ export function ProjectForm({ project }: { project?: Project }) {
       maps_link: (fd.get('maps_link') as string) || null,
       drive_link: (fd.get('drive_link') as string) || null,
       slab_area: slabRaw ? parseInt(slabRaw, 10) || null : null,
-      data_category: fd.get('data_category') as string,
+      data_category: fd.get('data_category') as DataCategory,
     }
     // Tracked projects need a mob date to anchor stage timelines — without one,
     // save as Reference instead of blocking the save.

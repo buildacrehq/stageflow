@@ -7,6 +7,7 @@ import { ProjectProgressPanel } from '@/components/ui/ProjectProgressPanel'
 import { visibleStructureStages, FINISHING_STAGES } from '@/lib/constants'
 import type { ProjectSummary, StageAnalysis, StageStatusRow } from '@/types'
 import { computeStageAnalysis } from '@/lib/stageAnalysis'
+import { parseCategoryParam, categoryTabCls } from '@/lib/dataCategory'
 
 export const revalidate = 0
 
@@ -30,8 +31,8 @@ async function getData() {
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const { summaries: allSummaries, allStages: allStagesRaw, completedStages, targets, floorsMap } = await getData()
 
-  const { category = 'all' } = await searchParams
-  const activeCategory = category === 'tracked' || category === 'reference' ? category : 'all'
+  const { category } = await searchParams
+  const activeCategory = parseCategoryParam(category)
   const summaries = activeCategory === 'all' ? allSummaries : allSummaries.filter(p => p.data_category === activeCategory)
   const includedIds = new Set(summaries.map(p => p.id))
   const allStages = activeCategory === 'all' ? allStagesRaw : allStagesRaw.filter(s => includedIds.has(s.project_id))
@@ -119,13 +120,6 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   overdue.sort((a, b) => b.daysLeft - a.daysLeft)
   upcoming.sort((a, b) => a.daysLeft - b.daysLeft)
 
-  const tabCls = (t: string) =>
-    `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-      activeCategory === t
-        ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
-        : 'text-gray-500 hover:text-gray-700'
-    }`
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -136,9 +130,9 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
           </p>
         </div>
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-          <Link href="/?category=tracked" className={tabCls('tracked')}>Tracked</Link>
-          <Link href="/?category=reference" className={tabCls('reference')}>Reference</Link>
-          <Link href="/?category=all" className={tabCls('all')}>All</Link>
+          <Link href="/?category=tracked" className={categoryTabCls(activeCategory, 'tracked')}>Tracked</Link>
+          <Link href="/?category=reference" className={categoryTabCls(activeCategory, 'reference')}>Reference</Link>
+          <Link href="/?category=all" className={categoryTabCls(activeCategory, 'all')}>All</Link>
         </div>
       </div>
 

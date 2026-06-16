@@ -128,9 +128,7 @@ export default async function CoordinatorAnalysisPage() {
 
       <AnalysisCharts
         stageAnalysis={stageAnalysis}
-        summaries={summaries}
         allStages={allStages}
-        bottlenecks={bottlenecks}
         atRisk={atRisk}
         bestProjects={bestProjects}
         worstProjects={worstProjects}

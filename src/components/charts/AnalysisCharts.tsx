@@ -9,9 +9,7 @@ import Link from 'next/link'
 
 interface Props {
   stageAnalysis: StageAnalysis[]
-  summaries: ProjectSummary[]
   allStages: StageStatusRow[]
-  bottlenecks: StageAnalysis[]
   atRisk: ProjectSummary[]
   bestProjects: ProjectSummary[]
   worstProjects: ProjectSummary[]
@@ -19,7 +17,7 @@ interface Props {
 }
 
 export function AnalysisCharts({
-  stageAnalysis, summaries, allStages, bottlenecks, atRisk,
+  stageAnalysis, allStages, atRisk,
   bestProjects, worstProjects, locationData,
 }: Props) {
 
