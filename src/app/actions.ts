@@ -127,6 +127,7 @@ export async function createProject(data: {
   maps_link?: string | null
   drive_link?: string | null
   slab_area?: number | null
+  data_category?: string
 }) {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()
@@ -421,6 +422,7 @@ export async function updateProject(id: string, data: {
   maps_link: string | null
   drive_link: string | null
   slab_area: number | null
+  data_category: string
 }) {
   await requireRole('admin', 'coordinator')
   const sb = getAdminClient()

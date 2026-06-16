@@ -6,34 +6,49 @@ import type { ProjectSummary } from '@/types'
 export const revalidate = 60
 
 async function getData() {
-  const [summaries, completedStages, targets] = await Promise.all([
+  const [summaries, allStages, targets] = await Promise.all([
     supabase.from('project_summary_view').select('*').order('mob_date', { ascending: false }),
-    supabase.from('project_stages').select('project_id, stage_name').not('completed_date', 'is', null),
+    supabase.from('project_stages').select('project_id, stage_name, completed_date'),
     supabase.from('stage_targets').select('stage_name, sort_order').order('sort_order'),
   ])
   return {
     projects: (summaries.data ?? []) as ProjectSummary[],
-    completedStages: completedStages.data ?? [],
+    allStages: allStages.data ?? [],
     targets: targets.data ?? [],
   }
 }
 
 export default async function ProjectsPage() {
-  const { projects, completedStages, targets } = await getData()
+  const { projects, allStages, targets } = await getData()
 
-  // Build map: project_id -> Set of completed stage names
-  const completedMap = new Map<string, Set<string>>()
-  completedStages.forEach(({ project_id, stage_name }) => {
-    if (!completedMap.has(project_id)) completedMap.set(project_id, new Set())
-    completedMap.get(project_id)!.add(stage_name)
+  const sortOrderMap = Object.fromEntries(targets.map(t => [t.stage_name, t.sort_order]))
+
+  // Build map: project_id -> rows with any data (completed or just touched), by sort_order
+  const stagesByProject = new Map<string, { stage_name: string; sort_order: number; completed: boolean }[]>()
+  allStages.forEach(({ project_id, stage_name, completed_date }) => {
+    const sort_order = sortOrderMap[stage_name]
+    if (sort_order === undefined) return
+    if (!stagesByProject.has(project_id)) stagesByProject.set(project_id, [])
+    stagesByProject.get(project_id)!.push({ stage_name, sort_order, completed: !!completed_date })
   })
 
-  // Current stage = first target stage not yet completed
+  // Current stage: the furthest-along stage with any data. If that stage isn't
+  // completed yet, it's the current stage in progress. If it is completed, the
+  // current stage is the next one in sequence — this lets projects whose tracking
+  // starts mid-way (e.g. only "SF Lintel" onward has data) show that stage instead
+  // of always defaulting back to "Foundation 1".
   const currentStageMap: Record<string, string> = {}
   projects.forEach(p => {
-    const done = completedMap.get(p.id) ?? new Set()
-    const next = targets.find(t => !done.has(t.stage_name))
-    if (next) currentStageMap[p.id] = next.stage_name
+    const rows = (stagesByProject.get(p.id) ?? []).slice().sort((a, b) => a.sort_order - b.sort_order)
+    const lastTouched = rows[rows.length - 1]
+    if (!lastTouched) {
+      if (targets[0]) currentStageMap[p.id] = targets[0].stage_name
+    } else if (!lastTouched.completed) {
+      currentStageMap[p.id] = lastTouched.stage_name
+    } else {
+      const next = targets.find(t => t.sort_order > lastTouched.sort_order)
+      currentStageMap[p.id] = next ? next.stage_name : lastTouched.stage_name
+    }
   })
 
   return (

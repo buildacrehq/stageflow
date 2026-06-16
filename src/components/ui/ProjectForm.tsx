@@ -42,6 +42,7 @@ export function ProjectForm({ project }: { project?: Project }) {
       maps_link: (fd.get('maps_link') as string) || null,
       drive_link: (fd.get('drive_link') as string) || null,
       slab_area: slabRaw ? parseInt(slabRaw, 10) || null : null,
+      data_category: fd.get('data_category') as string,
     }
 
     startTransition(async () => {
@@ -112,6 +113,13 @@ export function ProjectForm({ project }: { project?: Project }) {
               <option value="active">Active</option>
               <option value="completed">Completed</option>
               <option value="on_hold">On Hold</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Data category</label>
+            <select name="data_category" defaultValue={project?.data_category ?? 'tracked'} className={inputCls + ' bg-white'}>
+              <option value="tracked">Tracked — complete data, used in analysis</option>
+              <option value="reference">Reference — incomplete data, kept for record only</option>
             </select>
           </div>
           <div>

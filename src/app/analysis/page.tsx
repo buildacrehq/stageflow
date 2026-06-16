@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { AnalysisCharts } from '@/components/charts/AnalysisCharts'
 import type { StageAnalysis, ProjectSummary, StageStatusRow } from '@/types'
@@ -17,8 +18,14 @@ async function getData() {
   }
 }
 
-export default async function AnalysisPage() {
-  const { stageAnalysis, summaries, allStages } = await getData()
+export default async function AnalysisPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const { stageAnalysis, summaries: allSummaries, allStages: allStagesRaw } = await getData()
+
+  const { category = 'all' } = await searchParams
+  const activeCategory = category === 'tracked' || category === 'reference' ? category : 'all'
+  const summaries = activeCategory === 'all' ? allSummaries : allSummaries.filter(p => p.data_category === activeCategory)
+  const includedIds = new Set(summaries.map(p => p.id))
+  const allStages = activeCategory === 'all' ? allStagesRaw : allStagesRaw.filter(s => includedIds.has(s.project_id))
 
   // Bottleneck: stages with highest avg delay
   const bottlenecks = stageAnalysis
@@ -61,11 +68,25 @@ export default async function AnalysisPage() {
     .filter(d => d.total >= 1)
     .sort((a, b) => b.avgDelay - a.avgDelay)
 
+  const tabCls = (t: string) =>
+    `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+      activeCategory === t
+        ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
+        : 'text-gray-500 hover:text-gray-700'
+    }`
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">Deep Analysis</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Business insights across all projects</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Deep Analysis</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Business insights across all projects</p>
+        </div>
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          <Link href="/analysis?category=tracked" className={tabCls('tracked')}>Tracked</Link>
+          <Link href="/analysis?category=reference" className={tabCls('reference')}>Reference</Link>
+          <Link href="/analysis?category=all" className={tabCls('all')}>All</Link>
+        </div>
       </div>
 
       {/* Summary insight cards */}

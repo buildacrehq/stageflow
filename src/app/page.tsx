@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KpiCard } from '@/components/ui/KpiCard'
 import { OverviewCharts } from '@/components/charts/OverviewCharts'
@@ -25,8 +26,12 @@ async function getData() {
   }
 }
 
-export default async function OverviewPage() {
-  const { summaries, stageAnalysis, completedStages, targets, floorsMap } = await getData()
+export default async function OverviewPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const { summaries: allSummaries, stageAnalysis, completedStages, targets, floorsMap } = await getData()
+
+  const { category = 'all' } = await searchParams
+  const activeCategory = category === 'tracked' || category === 'reference' ? category : 'all'
+  const summaries = activeCategory === 'all' ? allSummaries : allSummaries.filter(p => p.data_category === activeCategory)
 
   const totalProjects = summaries.length
   const active = summaries.filter(p => p.status === 'active').length
@@ -110,13 +115,27 @@ export default async function OverviewPage() {
   overdue.sort((a, b) => b.daysLeft - a.daysLeft)
   upcoming.sort((a, b) => a.daysLeft - b.daysLeft)
 
+  const tabCls = (t: string) =>
+    `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+      activeCategory === t
+        ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
+        : 'text-gray-500 hover:text-gray-700'
+    }`
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">Overview</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          {totalProjects} projects total · milestone stats show active projects only
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Overview</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {totalProjects} projects total · milestone stats show active projects only
+          </p>
+        </div>
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          <Link href="/?category=tracked" className={tabCls('tracked')}>Tracked</Link>
+          <Link href="/?category=reference" className={tabCls('reference')}>Reference</Link>
+          <Link href="/?category=all" className={tabCls('all')}>All</Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

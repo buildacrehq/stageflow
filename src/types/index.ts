@@ -2,6 +2,7 @@ export type StageCategory = 'structure' | 'finishing'
 export type ProjectStatus = 'active' | 'completed' | 'on_hold'
 export type StageStatus = 'on_time' | 'buffer' | 'delayed' | 'no_data'
 export type UserRole = 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client' | 'viewer'
+export type DataCategory = 'tracked' | 'reference'
 
 export interface StageTarget {
   id: string
@@ -30,6 +31,7 @@ export interface Project {
   maps_link: string | null
   drive_link: string | null
   slab_area: number | null
+  data_category: DataCategory
   created_at: string
   updated_at: string
 }
@@ -68,6 +70,7 @@ export interface ProjectSummary {
   location: string | null
   mob_date: string | null
   status: ProjectStatus
+  data_category: DataCategory
   total_stages_done: number
   stages_on_time: number
   stages_in_buffer: number
