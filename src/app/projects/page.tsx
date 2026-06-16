@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { ProjectsTable } from '@/components/ui/ProjectsTable'
+import { parseCategoryParam, categoryTabCls } from '@/lib/dataCategory'
 import type { ProjectSummary } from '@/types'
 
 export const revalidate = 60
@@ -18,8 +19,12 @@ async function getData() {
   }
 }
 
-export default async function ProjectsPage() {
-  const { projects, allStages, targets } = await getData()
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const { projects: allProjects, allStages, targets } = await getData()
+
+  const { category } = await searchParams
+  const activeCategory = parseCategoryParam(category)
+  const projects = activeCategory === 'all' ? allProjects : allProjects.filter(p => p.data_category === activeCategory)
 
   const sortOrderMap = Object.fromEntries(targets.map(t => [t.stage_name, t.sort_order]))
 
@@ -53,17 +58,24 @@ export default async function ProjectsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">Projects</h1>
           <p className="text-sm text-gray-500 mt-0.5">{projects.length} projects total</p>
         </div>
-        <Link
-          href="/projects/new"
-          className="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 transition-colors"
-        >
-          + New Project
-        </Link>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+            <Link href="/projects?category=tracked" className={categoryTabCls(activeCategory, 'tracked')}>Tracked</Link>
+            <Link href="/projects?category=reference" className={categoryTabCls(activeCategory, 'reference')}>Reference</Link>
+            <Link href="/projects?category=all" className={categoryTabCls(activeCategory, 'all')}>All</Link>
+          </div>
+          <Link
+            href="/projects/new"
+            className="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 transition-colors"
+          >
+            + New Project
+          </Link>
+        </div>
       </div>
 
       <ProjectsTable projects={projects} currentStageMap={currentStageMap} />
