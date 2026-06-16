@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
 import { ProjectsTable } from '@/components/ui/ProjectsTable'
+import { parseCategoryParam, categoryTabCls } from '@/lib/dataCategory'
 import type { ProjectSummary } from '@/types'
 
 export const revalidate = 0
 
-export default async function CoordinatorProjectsPage() {
+export default async function CoordinatorProjectsPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const role = await getUserRole()
@@ -36,9 +38,13 @@ export default async function CoordinatorProjectsPage() {
     sb.from('stage_targets').select('stage_name, sort_order').order('sort_order'),
   ])
 
-  const projects = (summariesRes.data ?? []) as ProjectSummary[]
+  const allProjects = (summariesRes.data ?? []) as ProjectSummary[]
   const completedStages = completedStagesRes.data ?? []
   const targets = targetsRes.data ?? []
+
+  const { category } = await searchParams
+  const activeCategory = parseCategoryParam(category)
+  const projects = activeCategory === 'all' ? allProjects : allProjects.filter(p => p.data_category === activeCategory)
 
   const completedMap = new Map<string, Set<string>>()
   completedStages.forEach(({ project_id, stage_name }) => {
@@ -55,9 +61,16 @@ export default async function CoordinatorProjectsPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">Projects</h1>
-        <p className="text-sm text-gray-500 mt-0.5">{projects.length} project{projects.length !== 1 ? 's' : ''} assigned to you</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Projects</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{projects.length} project{projects.length !== 1 ? 's' : ''} assigned to you</p>
+        </div>
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          <Link href="/coordinator/projects?category=tracked" className={categoryTabCls(activeCategory, 'tracked')}>Tracked</Link>
+          <Link href="/coordinator/projects?category=reference" className={categoryTabCls(activeCategory, 'reference')}>Reference</Link>
+          <Link href="/coordinator/projects?category=all" className={categoryTabCls(activeCategory, 'all')}>All</Link>
+        </div>
       </div>
       <ProjectsTable
         projects={projects}
