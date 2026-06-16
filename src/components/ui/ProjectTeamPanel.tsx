@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, type ReactNode } from 'react'
 import { UserCheck, HardHat, User, X, History, Briefcase } from 'lucide-react'
 import {
   assignCoordinatorProject, removeCoordinatorProject,
@@ -107,7 +107,10 @@ export function ProjectTeamPanel({
   const unassignedMgrs = allManagers.filter(m => !managers.find(a => a.id === m.id))
   const unassignedClients = allClients.filter(c => !clients.find(a => a.id === c.id))
 
-  const cols = showCoordinators ? 4 : 3
+  // Re-assigning the same person isn't a real handover — don't clutter history with it
+  const visibleCoordHistory = coordinatorHistory.filter(h => !coords.some(c => c.name === h.name))
+  const visibleEngHistory = engineerHistory.filter(h => !engineers.some(e => e.name === h.name))
+  const visibleMgrHistory = managerHistory.filter(h => !managers.some(m => m.name === h.name))
 
   function Chips({ items, color, onRemove, readOnly }: { items: Person[]; color: string; onRemove: (id: string) => void; readOnly?: boolean }) {
     if (items.length === 0) return <p className="text-xs text-gray-400 italic">None assigned</p>
@@ -127,101 +130,98 @@ export function ProjectTeamPanel({
     )
   }
 
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className={`grid divide-x divide-gray-100 ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-
-        {showCoordinators && (
-          <div className="px-4 py-3 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <UserCheck size={12} className="text-gray-400 shrink-0" />
-                <span className="text-xs font-semibold text-gray-600">Coordinators</span>
-                {coords.length > 0 && <span className="text-xs px-1 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">{coords.length}</span>}
-              </div>
-              {!readOnlyCoordinators && <AssignSelect placeholder="Assign" options={unassignedCoords} onSelect={p => assign(p, setCoords as (fn: (prev: Person[]) => Person[]) => void, assignCoordinatorProject)} disabled={isPending} />}
-            </div>
-            <Chips items={coords} color="bg-amber-50 border-amber-200 text-amber-800" readOnly={readOnlyCoordinators} onRemove={id => remove(id, setCoords as (fn: (prev: Person[]) => Person[]) => void, removeCoordinatorProject)} />
-            {coordinatorHistory.length > 0 && (
-              <div>
-                <button onClick={() => setShowCoordHistory(v => !v)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
-                  <History size={10} />{showCoordHistory ? 'Hide' : 'History'} ({coordinatorHistory.length})
-                </button>
-                {showCoordHistory && (
-                  <div className="mt-1 space-y-0.5">
-                    {coordinatorHistory.map((h, i) => (
-                      <div key={i} className="text-xs text-gray-500">{h.name} <span className="text-gray-300">{fmtDate(h.assigned_at)} → {fmtDate(h.removed_at)}</span></div>
-                    ))}
-                  </div>
-                )}
+  function Section({ icon: Icon, label, badgeColor, count, assignSelect, children, history, showHistory, onToggleHistory }: {
+    icon: typeof UserCheck
+    label: string
+    badgeColor: string
+    count: number
+    assignSelect: ReactNode
+    children: ReactNode
+    history?: { name: string; assigned_at: string | null; removed_at: string }[]
+    showHistory?: boolean
+    onToggleHistory?: () => void
+  }) {
+    return (
+      <div className="px-4 py-3 space-y-2">
+        <div className="flex items-center gap-1.5">
+          <Icon size={12} className="text-gray-400 shrink-0" />
+          <span className="text-xs font-semibold text-gray-600">{label}</span>
+          {count > 0 && <span className={`text-xs px-1 py-0.5 rounded font-medium ${badgeColor}`}>{count}</span>}
+        </div>
+        {assignSelect}
+        {children}
+        {history && history.length > 0 && (
+          <div>
+            <button onClick={onToggleHistory} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+              <History size={10} />{showHistory ? 'Hide' : 'History'} ({history.length})
+            </button>
+            {showHistory && (
+              <div className="mt-1 space-y-0.5">
+                {history.map((h, i) => (
+                  <div key={i} className="text-xs text-gray-500">{h.name} <span className="text-gray-300">{fmtDate(h.assigned_at)} → {fmtDate(h.removed_at)}</span></div>
+                ))}
               </div>
             )}
           </div>
         )}
+      </div>
+    )
+  }
 
-        <div className="px-4 py-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <HardHat size={12} className="text-gray-400 shrink-0" />
-              <span className="text-xs font-semibold text-gray-600">Site Engineers</span>
-              {engineers.length > 0 && <span className="text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded font-medium">{engineers.length}</span>}
-            </div>
-            <AssignSelect placeholder="Assign" options={unassignedEngs} onSelect={e => assign(e, setEngineers as (fn: (prev: Person[]) => Person[]) => void, assignSiteEngineerProject)} disabled={isPending} />
-          </div>
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 divide-x-0 sm:divide-x divide-gray-100">
+
+        {showCoordinators && (
+          <Section
+            icon={UserCheck}
+            label="Coordinators"
+            badgeColor="bg-amber-100 text-amber-700"
+            count={coords.length}
+            assignSelect={!readOnlyCoordinators && <AssignSelect placeholder="Assign" options={unassignedCoords} onSelect={p => assign(p, setCoords as (fn: (prev: Person[]) => Person[]) => void, assignCoordinatorProject)} disabled={isPending} />}
+            history={visibleCoordHistory}
+            showHistory={showCoordHistory}
+            onToggleHistory={() => setShowCoordHistory(v => !v)}
+          >
+            <Chips items={coords} color="bg-amber-50 border-amber-200 text-amber-800" readOnly={readOnlyCoordinators} onRemove={id => remove(id, setCoords as (fn: (prev: Person[]) => Person[]) => void, removeCoordinatorProject)} />
+          </Section>
+        )}
+
+        <Section
+          icon={HardHat}
+          label="Site Engineers"
+          badgeColor="bg-gray-100 text-gray-600"
+          count={engineers.length}
+          assignSelect={<AssignSelect placeholder="Assign" options={unassignedEngs} onSelect={e => assign(e, setEngineers as (fn: (prev: Person[]) => Person[]) => void, assignSiteEngineerProject)} disabled={isPending} />}
+          history={visibleEngHistory}
+          showHistory={showEngHistory}
+          onToggleHistory={() => setShowEngHistory(v => !v)}
+        >
           <Chips items={engineers} color="bg-gray-50 border-gray-200 text-gray-700" onRemove={id => remove(id, setEngineers as (fn: (prev: Person[]) => Person[]) => void, removeSiteEngineerProject)} />
-          {engineerHistory.length > 0 && (
-            <div>
-              <button onClick={() => setShowEngHistory(v => !v)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
-                <History size={10} />{showEngHistory ? 'Hide' : 'History'} ({engineerHistory.length})
-              </button>
-              {showEngHistory && (
-                <div className="mt-1 space-y-0.5">
-                  {engineerHistory.map((h, i) => (
-                    <div key={i} className="text-xs text-gray-500">{h.name} <span className="text-gray-300">{fmtDate(h.assigned_at)} → {fmtDate(h.removed_at)}</span></div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        </Section>
 
-        <div className="px-4 py-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <Briefcase size={12} className="text-gray-400 shrink-0" />
-              <span className="text-xs font-semibold text-gray-600">Proj. Managers</span>
-              {managers.length > 0 && <span className="text-xs px-1 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">{managers.length}</span>}
-            </div>
-            <AssignSelect placeholder="Assign" options={unassignedMgrs} onSelect={m => assign(m, setManagers as (fn: (prev: Person[]) => Person[]) => void, assignProjectManagerProject)} disabled={isPending} />
-          </div>
+        <Section
+          icon={Briefcase}
+          label="Proj. Managers"
+          badgeColor="bg-purple-100 text-purple-700"
+          count={managers.length}
+          assignSelect={<AssignSelect placeholder="Assign" options={unassignedMgrs} onSelect={m => assign(m, setManagers as (fn: (prev: Person[]) => Person[]) => void, assignProjectManagerProject)} disabled={isPending} />}
+          history={visibleMgrHistory}
+          showHistory={showMgrHistory}
+          onToggleHistory={() => setShowMgrHistory(v => !v)}
+        >
           <Chips items={managers} color="bg-purple-50 border-purple-200 text-purple-800" onRemove={id => remove(id, setManagers as (fn: (prev: Person[]) => Person[]) => void, removeProjectManagerProject)} />
-          {managerHistory.length > 0 && (
-            <div>
-              <button onClick={() => setShowMgrHistory(v => !v)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
-                <History size={10} />{showMgrHistory ? 'Hide' : 'History'} ({managerHistory.length})
-              </button>
-              {showMgrHistory && (
-                <div className="mt-1 space-y-0.5">
-                  {managerHistory.map((h, i) => (
-                    <div key={i} className="text-xs text-gray-500">{h.name} <span className="text-gray-300">{fmtDate(h.assigned_at)} → {fmtDate(h.removed_at)}</span></div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        </Section>
 
-        <div className="px-4 py-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <User size={12} className="text-gray-400 shrink-0" />
-              <span className="text-xs font-semibold text-gray-600">Clients</span>
-              {clients.length > 0 && <span className="text-xs px-1 py-0.5 bg-blue-100 text-blue-700 rounded font-medium">{clients.length}</span>}
-            </div>
-            <AssignSelect placeholder="Assign" options={unassignedClients} onSelect={c => assign(c, setClients as (fn: (prev: Person[]) => Person[]) => void, assignClientProject)} disabled={isPending} />
-          </div>
+        <Section
+          icon={User}
+          label="Clients"
+          badgeColor="bg-blue-100 text-blue-700"
+          count={clients.length}
+          assignSelect={<AssignSelect placeholder="Assign" options={unassignedClients} onSelect={c => assign(c, setClients as (fn: (prev: Person[]) => Person[]) => void, assignClientProject)} disabled={isPending} />}
+        >
           <Chips items={clients} color="bg-blue-50 border-blue-200 text-blue-700" onRemove={id => remove(id, setClients as (fn: (prev: Person[]) => Person[]) => void, removeClientProject)} />
-        </div>
+        </Section>
 
       </div>
       {error && <p className="text-xs text-red-600 px-4 pb-2">{error}</p>}
