@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export async function createAuthClient() {
@@ -43,4 +43,21 @@ export async function getUserRole(): Promise<'admin' | 'coordinator' | 'site_eng
   )
   const { data } = await sb.from('profiles').select('role').eq('id', user.id).single()
   return (data?.role as 'admin' | 'coordinator' | 'site_engineer' | 'project_manager' | 'client') ?? 'client'
+}
+
+export interface AssignedPerson { id: string; name: string; phone: string | null }
+
+export async function getAssignedTeam(client: SupabaseClient, projectId: string): Promise<{ engineers: AssignedPerson[]; managers: AssignedPerson[] }> {
+  const [engRes, mgrRes] = await Promise.all([
+    client.from('site_engineer_projects').select('user_id').eq('project_id', projectId).is('removed_at', null),
+    client.from('project_manager_projects').select('user_id').eq('project_id', projectId).is('removed_at', null),
+  ])
+  const ids = [...(engRes.data ?? []).map(r => r.user_id), ...(mgrRes.data ?? []).map(r => r.user_id)]
+  if (ids.length === 0) return { engineers: [], managers: [] }
+  const { data: profiles } = await client.from('profiles').select('id, name, phone').in('id', ids)
+  const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p as AssignedPerson]))
+  return {
+    engineers: (engRes.data ?? []).map(r => profileMap[r.user_id]).filter(Boolean),
+    managers: (mgrRes.data ?? []).map(r => profileMap[r.user_id]).filter(Boolean),
+  }
 }

@@ -5,8 +5,6 @@ import { createProject, updateProject } from '@/app/actions'
 import { useBeforeUnload } from '@/lib/hooks'
 import type { Project } from '@/types'
 
-interface Engineer { id: string; name: string; phone?: string | null }
-
 const STANDARD_PLOT_SIZES = ['20x30', '20x40', '30x40', '30x50', '40x40', '40x60']
 
 function getInitialPlotSizeOption(plotSize: string | null | undefined): string {
@@ -14,20 +12,10 @@ function getInitialPlotSizeOption(plotSize: string | null | undefined): string {
   return STANDARD_PLOT_SIZES.includes(plotSize) ? plotSize : 'custom'
 }
 
-export function ProjectForm({ project, engineers = [], managers = [] }: { project?: Project; engineers?: Engineer[]; managers?: Engineer[] }) {
+export function ProjectForm({ project }: { project?: Project }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [showMap, setShowMap] = useState(project ? !!project.maps_link : true)
-  const [showDrive, setShowDrive] = useState(project ? !!project.drive_link : true)
-  const [engineerName, setEngineerName] = useState(
-    engineers.find(e => e.name === project?.engineer_name)?.name ?? ''
-  )
-  const [engineerPhone, setEngineerPhone] = useState(project?.engineer_phone ?? '')
-  const [managerName, setManagerName] = useState(
-    managers.find(m => m.name === project?.project_manager_name)?.name ?? ''
-  )
-  const [managerPhone, setManagerPhone] = useState(project?.project_manager_phone ?? '')
   const [plotSizeOption, setPlotSizeOption] = useState(getInitialPlotSizeOption(project?.plot_size))
   const [customPlotSize, setCustomPlotSize] = useState(
     project?.plot_size && !STANDARD_PLOT_SIZES.includes(project.plot_size) ? project.plot_size : ''
@@ -51,12 +39,8 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
       status: fd.get('status') as string,
       notes: (fd.get('notes') as string) || null,
       client_phone: (fd.get('client_phone') as string) || null,
-      engineer_name: (fd.get('engineer_name') as string) || null,
-      engineer_phone: (fd.get('engineer_phone') as string) || null,
-      project_manager_name: (fd.get('project_manager_name') as string) || null,
-      project_manager_phone: (fd.get('project_manager_phone') as string) || null,
-      maps_link: showMap ? ((fd.get('maps_link') as string) || null) : null,
-      drive_link: showDrive ? ((fd.get('drive_link') as string) || null) : null,
+      maps_link: (fd.get('maps_link') as string) || null,
+      drive_link: (fd.get('drive_link') as string) || null,
       slab_area: slabRaw ? parseInt(slabRaw, 10) || null : null,
     }
 
@@ -76,18 +60,6 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
   }
 
   const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition-shadow'
-
-  function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
-    return (
-      <button
-        type="button"
-        onClick={onToggle}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${on ? 'bg-green-600' : 'bg-gray-200'}`}
-      >
-        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${on ? 'translate-x-4' : 'translate-x-1'}`} />
-      </button>
-    )
-  }
 
   return (
     <form onSubmit={handleSubmit} onChange={() => setIsDirty(true)} className="space-y-5">
@@ -129,66 +101,6 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Location</label>
             <input name="location" defaultValue={project?.location ?? ''} placeholder="e.g. Whitefield, Bangalore" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Site engineer</label>
-            <select
-              name="engineer_name"
-              value={engineerName}
-              onChange={e => {
-                setEngineerName(e.target.value)
-                const eng = engineers.find(en => en.name === e.target.value)
-                setEngineerPhone(eng?.phone ?? '')
-              }}
-              className={inputCls + ' bg-white'}
-            >
-              <option value="">Not assigned</option>
-              {engineers.map(e => (
-                <option key={e.id} value={e.name}>{e.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Site engineer phone</label>
-            <input
-              name="engineer_phone"
-              inputMode="numeric"
-              maxLength={10}
-              value={engineerPhone}
-              onChange={e => setEngineerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="e.g. 9876543210"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Project manager</label>
-            <select
-              name="project_manager_name"
-              value={managerName}
-              onChange={e => {
-                setManagerName(e.target.value)
-                const mgr = managers.find(m => m.name === e.target.value)
-                setManagerPhone(mgr?.phone ?? '')
-              }}
-              className={inputCls + ' bg-white'}
-            >
-              <option value="">Not assigned</option>
-              {managers.map(m => (
-                <option key={m.id} value={m.name}>{m.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Project manager phone</label>
-            <input
-              name="project_manager_phone"
-              inputMode="numeric"
-              maxLength={10}
-              value={managerPhone}
-              onChange={e => setManagerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="e.g. 9876543210"
-              className={inputCls}
-            />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Mobilisation date</label>
@@ -249,23 +161,13 @@ export function ProjectForm({ project, engineers = [], managers = [] }: { projec
       </div>
 
       <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Toggle on={showMap} onToggle={() => setShowMap(v => !v)} />
-          <label className="text-xs font-medium text-gray-600">Google Maps link</label>
-        </div>
-        {showMap && (
-          <input name="maps_link" type="url" defaultValue={project?.maps_link ?? ''} placeholder="https://maps.google.com/..." className={inputCls} />
-        )}
+        <label className="block text-xs font-medium text-gray-600 mb-1.5">Google Maps link</label>
+        <input name="maps_link" type="url" defaultValue={project?.maps_link ?? ''} placeholder="https://maps.google.com/..." className={inputCls} />
       </div>
 
       <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Toggle on={showDrive} onToggle={() => setShowDrive(v => !v)} />
-          <label className="text-xs font-medium text-gray-600">Google Drive link</label>
-        </div>
-        {showDrive && (
-          <input name="drive_link" type="url" defaultValue={project?.drive_link ?? ''} placeholder="https://drive.google.com/..." className={inputCls} />
-        )}
+        <label className="block text-xs font-medium text-gray-600 mb-1.5">Google Drive link</label>
+        <input name="drive_link" type="url" defaultValue={project?.drive_link ?? ''} placeholder="https://drive.google.com/..." className={inputCls} />
       </div>
 
       <div className="flex items-center gap-3 pt-1">

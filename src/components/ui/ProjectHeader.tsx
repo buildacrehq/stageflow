@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { Phone, MapPin, Users, HardHat, ExternalLink, CalendarDays, Layers, Briefcase, FolderOpen, Maximize2 } from 'lucide-react'
 import type { Project } from '@/types'
 
+interface Person { name: string; phone: string | null }
+
 interface Props {
   project: Project
   backHref: string
@@ -12,9 +14,11 @@ interface Props {
   role: string
   coordinatorName?: string | null
   coordinatorPhone?: string | null
+  engineers?: Person[]
+  managers?: Person[]
 }
 
-export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, delayed, role, coordinatorName, coordinatorPhone }: Props) {
+export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, delayed, role, coordinatorName, coordinatorPhone, engineers = [], managers = [] }: Props) {
   const mapEmbedSrc = project.location
     ? `https://maps.google.com/maps?q=${encodeURIComponent(project.location)}&output=embed&z=14`
     : null
@@ -123,40 +127,56 @@ export function ProjectHeader({ project, backHref, backLabel, onTime, buffer, de
               </div>
             )}
 
-            {/* Engineer */}
-            {(project.engineer_name || project.engineer_phone) && (
+            {/* Site Engineer(s) */}
+            {engineers.length > 0 && (
               <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                 <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0 mt-0.5">
                   <HardHat size={15} className="text-orange-600" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Site Engineer</p>
-                  <p className="text-sm font-semibold text-gray-800 truncate">{project.engineer_name ?? 'Site Engineer'}</p>
-                  {project.engineer_phone && (
-                    <a href={`tel:${project.engineer_phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-0.5">
-                      <Phone size={10} />
-                      {project.engineer_phone}
-                    </a>
-                  )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">
+                    {engineers.length > 1 ? 'Multiple Site Engineers' : 'Site Engineer'}
+                  </p>
+                  <div className="space-y-1.5 mt-0.5">
+                    {engineers.map((e, i) => (
+                      <div key={i}>
+                        <p className="text-sm font-semibold text-gray-800 truncate">{e.name}</p>
+                        {e.phone && (
+                          <a href={`tel:${e.phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+                            <Phone size={10} />
+                            {e.phone}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Project Manager */}
-            {(project.project_manager_name || project.project_manager_phone) && (
+            {/* Project Manager(s) */}
+            {managers.length > 0 && (
               <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                 <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center shrink-0 mt-0.5">
                   <Briefcase size={15} className="text-purple-600" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Project Manager</p>
-                  <p className="text-sm font-semibold text-gray-800 truncate">{project.project_manager_name ?? 'Project Manager'}</p>
-                  {project.project_manager_phone && (
-                    <a href={`tel:${project.project_manager_phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-0.5">
-                      <Phone size={10} />
-                      {project.project_manager_phone}
-                    </a>
-                  )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">
+                    {managers.length > 1 ? 'Multiple Project Managers' : 'Project Manager'}
+                  </p>
+                  <div className="space-y-1.5 mt-0.5">
+                    {managers.map((m, i) => (
+                      <div key={i}>
+                        <p className="text-sm font-semibold text-gray-800 truncate">{m.name}</p>
+                        {m.phone && (
+                          <a href={`tel:${m.phone}`} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+                            <Phone size={10} />
+                            {m.phone}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

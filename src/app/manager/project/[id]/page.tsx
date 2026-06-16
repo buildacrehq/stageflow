@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
-import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
+import { getCurrentUser, getUserRole, getAssignedTeam } from '@/lib/supabase-server'
 import { ProjectHeader } from '@/components/ui/ProjectHeader'
 import { ProjectGantt } from '@/components/charts/ProjectGantt'
 import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
@@ -60,6 +60,7 @@ export default async function ManagerProjectPage({ params }: { params: Promise<{
     coordinatorName = (profile?.name as string) ?? null
     coordinatorPhone = (profile?.phone as string) ?? null
   }
+  const { engineers, managers } = await getAssignedTeam(client, id)
 
   const doneStages = stages.filter(s => s.completed_date)
   const onTime = doneStages.filter(s => s.stage_status === 'on_time').length
@@ -78,6 +79,8 @@ export default async function ManagerProjectPage({ params }: { params: Promise<{
         role="project_manager"
         coordinatorName={coordinatorName}
         coordinatorPhone={coordinatorPhone}
+        engineers={engineers}
+        managers={managers}
       />
 
       <div className="bg-white border border-gray-200 rounded-xl p-5">

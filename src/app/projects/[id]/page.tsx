@@ -4,8 +4,7 @@ import { ProjectGantt } from '@/components/charts/ProjectGantt'
 import { StageEditor } from '@/components/ui/StageEditor'
 import { ProjectAnalysis } from '@/components/charts/ProjectAnalysis'
 import { ProjectHeader } from '@/components/ui/ProjectHeader'
-import { ProjectTeamPanel } from '@/components/ui/ProjectTeamPanel'
-import { getCurrentUser, getUserRole } from '@/lib/supabase-server'
+import { getCurrentUser, getUserRole, getAssignedTeam } from '@/lib/supabase-server'
 import type { StageStatusRow, StageTarget } from '@/types'
 
 export const revalidate = 0
@@ -81,94 +80,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { project, stages, targets, stageNotes, stagePayments, coordinatorName, coordinatorPhone } = await getData(id)
   if (!project) notFound()
 
-  // Coordinator + site engineer + project manager assignment data
-  let allCoordinators: { id: string; name: string }[] = []
-  let assignedCoordinators: { id: string; name: string }[] = []
-  let coordinatorHistory: { name: string; assigned_at: string | null; removed_at: string }[] = []
-  let allEngineers: { id: string; name: string }[] = []
-  let assignedEngineers: { id: string; name: string }[] = []
-  let engineerHistory: { name: string; assigned_at: string | null; removed_at: string }[] = []
-  let allManagers: { id: string; name: string }[] = []
-  let assignedManagers: { id: string; name: string }[] = []
-  let managerHistory: { name: string; assigned_at: string | null; removed_at: string }[] = []
-  let allClients: { id: string; name: string }[] = []
-  let assignedClients: { id: string; name: string }[] = []
-
-  if (role === 'admin') {
-    const client = sb()
-    const [profilesRes, coordAssignRes, engAssignRes, mgrAssignRes, clientAssignRes] = await Promise.all([
-      client.from('profiles').select('id, name, role').order('name'),
-      client.from('coordinator_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
-      client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
-      client.from('project_manager_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
-      client.from('client_projects').select('user_id').eq('project_id', id),
-    ])
-    const profileMap = Object.fromEntries((profilesRes.data ?? []).map(p => [p.id, p as { id: string; name: string; role: string }]))
-    allCoordinators = (profilesRes.data ?? []).filter(p => p.role === 'coordinator').map(p => ({ id: p.id, name: p.name as string }))
-    allEngineers = (profilesRes.data ?? []).filter(p => p.role === 'site_engineer').map(p => ({ id: p.id, name: p.name as string }))
-    allManagers = (profilesRes.data ?? []).filter(p => p.role === 'project_manager').map(p => ({ id: p.id, name: p.name as string }))
-    allClients = (profilesRes.data ?? []).filter(p => p.role === 'client').map(p => ({ id: p.id, name: p.name as string }))
-
-    const coordAssignments = coordAssignRes.data ?? []
-    const assignedCoordIds = new Set(coordAssignments.filter(r => !r.removed_at).map(r => r.user_id))
-    assignedCoordinators = allCoordinators.filter(c => assignedCoordIds.has(c.id))
-    coordinatorHistory = coordAssignments
-      .filter(r => r.removed_at)
-      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
-      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
-
-    const engAssignments = engAssignRes.data ?? []
-    const assignedEngIds = new Set(engAssignments.filter(r => !r.removed_at).map(r => r.user_id))
-    assignedEngineers = allEngineers.filter(e => assignedEngIds.has(e.id))
-    engineerHistory = engAssignments
-      .filter(r => r.removed_at)
-      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
-      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
-
-    const mgrAssignments = mgrAssignRes.data ?? []
-    const assignedMgrIds = new Set(mgrAssignments.filter(r => !r.removed_at).map(r => r.user_id))
-    assignedManagers = allManagers.filter(m => assignedMgrIds.has(m.id))
-    managerHistory = mgrAssignments
-      .filter(r => r.removed_at)
-      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
-      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
-
-    const assignedClientIds = new Set((clientAssignRes.data ?? []).map(r => r.user_id))
-    assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
-  } else if (role === 'coordinator') {
-    const client = sb()
-    const [profilesRes, engAssignRes, mgrAssignRes, clientAssignRes, selfRes] = await Promise.all([
-      client.from('profiles').select('id, name, role').in('role', ['site_engineer', 'project_manager', 'client']).order('name'),
-      client.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
-      client.from('project_manager_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
-      client.from('client_projects').select('user_id').eq('project_id', id),
-      client.from('profiles').select('id, name').eq('id', user!.id).single(),
-    ])
-    const profileMap = Object.fromEntries((profilesRes.data ?? []).map(p => [p.id, p as { id: string; name: string; role: string }]))
-    allEngineers = (profilesRes.data ?? []).filter(p => p.role === 'site_engineer').map(p => ({ id: p.id, name: p.name as string }))
-    allManagers = (profilesRes.data ?? []).filter(p => p.role === 'project_manager').map(p => ({ id: p.id, name: p.name as string }))
-    allClients = (profilesRes.data ?? []).filter(p => p.role === 'client').map(p => ({ id: p.id, name: p.name as string }))
-
-    const engAssignments = engAssignRes.data ?? []
-    const assignedEngIds = new Set(engAssignments.filter(r => !r.removed_at).map(r => r.user_id))
-    assignedEngineers = allEngineers.filter(e => assignedEngIds.has(e.id))
-    engineerHistory = engAssignments
-      .filter(r => r.removed_at)
-      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
-      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
-
-    const mgrAssignments = mgrAssignRes.data ?? []
-    const assignedMgrIds = new Set(mgrAssignments.filter(r => !r.removed_at).map(r => r.user_id))
-    assignedManagers = allManagers.filter(m => assignedMgrIds.has(m.id))
-    managerHistory = mgrAssignments
-      .filter(r => r.removed_at)
-      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
-      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
-
-    const assignedClientIds = new Set((clientAssignRes.data ?? []).map(r => r.user_id))
-    assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
-    if (selfRes.data) assignedCoordinators = [{ id: selfRes.data.id, name: selfRes.data.name as string }]
-  }
+  const { engineers, managers } = await getAssignedTeam(sb(), id)
 
   const doneStages = stages.filter(s => s.completed_date)
   const onTime = doneStages.filter(s => s.stage_status === 'on_time').length
@@ -190,26 +102,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         role={role}
         coordinatorName={coordinatorName}
         coordinatorPhone={coordinatorPhone}
+        engineers={engineers}
+        managers={managers}
       />
-
-      {(role === 'admin' || role === 'coordinator') && (
-        <ProjectTeamPanel
-          projectId={id}
-          showCoordinators={true}
-          readOnlyCoordinators={role === 'coordinator'}
-          allCoordinators={allCoordinators}
-          initialCoordinators={assignedCoordinators}
-          coordinatorHistory={coordinatorHistory}
-          allEngineers={allEngineers}
-          initialEngineers={assignedEngineers}
-          engineerHistory={engineerHistory}
-          allManagers={allManagers}
-          initialManagers={assignedManagers}
-          managerHistory={managerHistory}
-          allClients={allClients}
-          initialClients={assignedClients}
-        />
-      )}
 
       {/* Gantt */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">

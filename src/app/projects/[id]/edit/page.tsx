@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound, redirect } from 'next/navigation'
 import { ProjectForm } from '@/components/ui/ProjectForm'
 import { ProjectTargetsEditor } from '@/components/ui/ProjectTargetsEditor'
+import { ProjectTeamPanel } from '@/components/ui/ProjectTeamPanel'
 import { getUserRole, getCurrentUser } from '@/lib/supabase-server'
 import Link from 'next/link'
 import type { Project, StageTarget, ProjectStageOverride } from '@/types'
@@ -31,12 +32,10 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     if (!data) redirect('/coordinator/projects')
   }
 
-  const [projectRes, targetsRes, overridesRes, engineersRes, managersRes] = await Promise.all([
+  const [projectRes, targetsRes, overridesRes] = await Promise.all([
     sb.from('projects').select('*').eq('id', id).single(),
     sb.from('stage_targets').select('*').order('sort_order'),
     sb.from('project_stage_overrides').select('*').eq('project_id', id),
-    sb.from('profiles').select('id, name, phone').eq('role', 'site_engineer').order('name'),
-    sb.from('profiles').select('id, name, phone').eq('role', 'project_manager').order('name'),
   ])
 
   if (!projectRes.data) notFound()
@@ -44,8 +43,61 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
   const project = projectRes.data as Project
   const targets = (targetsRes.data ?? []) as StageTarget[]
   const overrides = (overridesRes.data ?? []) as ProjectStageOverride[]
-  const engineers = (engineersRes.data ?? []) as { id: string; name: string; phone: string | null }[]
-  const managers = (managersRes.data ?? []) as { id: string; name: string; phone: string | null }[]
+
+  // Team assignment data — admin sees all roles, coordinator sees engineers/managers/clients (not coordinators)
+  let allCoordinators: { id: string; name: string }[] = []
+  let assignedCoordinators: { id: string; name: string }[] = []
+  let coordinatorHistory: { name: string; assigned_at: string | null; removed_at: string }[] = []
+  let allEngineers: { id: string; name: string }[] = []
+  let assignedEngineers: { id: string; name: string }[] = []
+  let engineerHistory: { name: string; assigned_at: string | null; removed_at: string }[] = []
+  let allManagers: { id: string; name: string }[] = []
+  let assignedManagers: { id: string; name: string }[] = []
+  let managerHistory: { name: string; assigned_at: string | null; removed_at: string }[] = []
+  let allClients: { id: string; name: string }[] = []
+  let assignedClients: { id: string; name: string }[] = []
+
+  if (role === 'admin' || role === 'coordinator') {
+    const [profilesRes, coordAssignRes, engAssignRes, mgrAssignRes, clientAssignRes] = await Promise.all([
+      sb.from('profiles').select('id, name, role').order('name'),
+      sb.from('coordinator_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
+      sb.from('site_engineer_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
+      sb.from('project_manager_projects').select('user_id, assigned_at, removed_at').eq('project_id', id),
+      sb.from('client_projects').select('user_id').eq('project_id', id),
+    ])
+    const profileMap = Object.fromEntries((profilesRes.data ?? []).map(p => [p.id, p as { id: string; name: string; role: string }]))
+    allCoordinators = (profilesRes.data ?? []).filter(p => p.role === 'coordinator').map(p => ({ id: p.id, name: p.name as string }))
+    allEngineers = (profilesRes.data ?? []).filter(p => p.role === 'site_engineer').map(p => ({ id: p.id, name: p.name as string }))
+    allManagers = (profilesRes.data ?? []).filter(p => p.role === 'project_manager').map(p => ({ id: p.id, name: p.name as string }))
+    allClients = (profilesRes.data ?? []).filter(p => p.role === 'client').map(p => ({ id: p.id, name: p.name as string }))
+
+    const coordAssignments = coordAssignRes.data ?? []
+    const assignedCoordIds = new Set(coordAssignments.filter(r => !r.removed_at).map(r => r.user_id))
+    assignedCoordinators = allCoordinators.filter(c => assignedCoordIds.has(c.id))
+    coordinatorHistory = coordAssignments
+      .filter(r => r.removed_at)
+      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
+      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+
+    const engAssignments = engAssignRes.data ?? []
+    const assignedEngIds = new Set(engAssignments.filter(r => !r.removed_at).map(r => r.user_id))
+    assignedEngineers = allEngineers.filter(e => assignedEngIds.has(e.id))
+    engineerHistory = engAssignments
+      .filter(r => r.removed_at)
+      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
+      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+
+    const mgrAssignments = mgrAssignRes.data ?? []
+    const assignedMgrIds = new Set(mgrAssignments.filter(r => !r.removed_at).map(r => r.user_id))
+    assignedManagers = allManagers.filter(m => assignedMgrIds.has(m.id))
+    managerHistory = mgrAssignments
+      .filter(r => r.removed_at)
+      .sort((a, b) => new Date(b.removed_at as string).getTime() - new Date(a.removed_at as string).getTime())
+      .map(r => ({ name: profileMap[r.user_id]?.name ?? 'Unknown', assigned_at: r.assigned_at as string | null, removed_at: r.removed_at as string }))
+
+    const assignedClientIds = new Set((clientAssignRes.data ?? []).map(r => r.user_id))
+    assignedClients = allClients.filter(c => assignedClientIds.has(c.id))
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -59,8 +111,31 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
       {/* Project details form */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <ProjectForm project={project} engineers={engineers} managers={managers} />
+        <ProjectForm project={project} />
       </div>
+
+      {/* Team assignment — admin + coordinator */}
+      {(role === 'admin' || role === 'coordinator') && (
+        <div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Project team</p>
+          <ProjectTeamPanel
+            projectId={id}
+            showCoordinators={true}
+            readOnlyCoordinators={role === 'coordinator'}
+            allCoordinators={allCoordinators}
+            initialCoordinators={assignedCoordinators}
+            coordinatorHistory={coordinatorHistory}
+            allEngineers={allEngineers}
+            initialEngineers={assignedEngineers}
+            engineerHistory={engineerHistory}
+            allManagers={allManagers}
+            initialManagers={assignedManagers}
+            managerHistory={managerHistory}
+            allClients={allClients}
+            initialClients={assignedClients}
+          />
+        </div>
+      )}
 
       {/* Stage timeline overrides — admin + coordinator */}
       {(role === 'admin' || role === 'coordinator') && (
